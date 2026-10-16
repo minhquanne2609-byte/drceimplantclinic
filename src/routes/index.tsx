@@ -6118,13 +6118,13 @@ function PlanPage({ content }: { content: ContentMap }) {
                                         printScope === "all" ? "" : "print:hidden"
                                       }`}
                                     >
-                                      <td className="py-3 px-0 print:hidden border-0" />
-                                      <td className="py-3 pl-0 pr-3 text-left print:pl-6" colSpan={6}>
+                                      <td className="py-3 px-3 print:hidden border-0" />
+                                      <td className="py-2.5 px-3 text-center" colSpan={6}>
                                         <input
                                           type="text"
                                           value={h.label}
                                           onChange={(e) => updateHotelSupport(h.id, { label: e.target.value })}
-                                          className="w-full bg-transparent outline-none border-b border-dotted border-transparent focus:border-primary uppercase font-bold text-[3rem] print:hidden"
+                                          className="w-full bg-transparent outline-none border-b border-dotted border-transparent focus:border-primary uppercase font-bold text-[3rem] text-center print:hidden"
                                         />
                                         <span className="hidden print:inline uppercase">{h.label}</span>
                                       </td>
