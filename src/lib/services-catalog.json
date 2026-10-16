@@ -1,0 +1,562 @@
+[
+  {
+    "name": "Additional Fee for Pterygoid Implant",
+    "priceVnd": 5000000
+  },
+  {
+    "name": "Blood Test",
+    "priceVnd": 400000
+  },
+  {
+    "name": "Bone Graft GBR",
+    "priceVnd": 12000000
+  },
+  {
+    "name": "Bone Graft GBR (Provisional)",
+    "priceVnd": 12000000
+  },
+  {
+    "name": "Bone Graft Level I",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Bone Graft Level I (Provisional)",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Bone Graft Level II",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Bone Graft Level II (Provisional)",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Cercon HT (Germany) Crown",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT (Germany) Crown on Implant",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown (Aesthetics)",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown on Implant",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown on Natural Teeth",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown on RCT",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown on RCT Teeth",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Cercon HT Crown on RCT Tooth",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Closed Sinus Lift",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Closed Sinus Lift (Provisional)",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Closed Sinus Lift + Bone Graft",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Closed Sinus Lift + Bone Graft (Provisional)",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Conebeam CT (3D) scan",
+    "priceVnd": 800000
+  },
+  {
+    "name": "Dental Fillings",
+    "priceVnd": 1800000
+  },
+  {
+    "name": "Dentium (USA) Abutment",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Dentium (USA) Implant",
+    "priceVnd": 14000000
+  },
+  {
+    "name": "E. Max Porcelain Overlay",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Embedded Teeth Extraction",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Embedded Tooth Extraction",
+    "priceVnd": 3500000
+  },
+  {
+    "name": "Endocrown",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Extraction",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Fiberglass Post",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Fiberglass Post (Provisional)",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Fillings for Class II Cavities",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Fillings for Class III Cavities",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Fillings for Class V Cavities",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Full Jaw Zirconia Porcelain On The Entire Jaw All-on-6",
+    "priceVnd": 100000000
+  },
+  {
+    "name": "Full Removale Denture",
+    "priceVnd": 15000000
+  },
+  {
+    "name": "Gum Contouring",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Gum Contouring (Provisional)",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Implant Removal",
+    "priceVnd": 2000000
+  },
+  {
+    "name": "In-office Whitening with Opal Boost system",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Incisor Extraction",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Incisor Extraction (Provisional)",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Incisor Removal",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "IPS E.max ZirCAD Prime (All-on-4)",
+    "priceVnd": 100000000
+  },
+  {
+    "name": "IPS E.max ZirCAD Prime (All-on-6)",
+    "priceVnd": 100000000
+  },
+  {
+    "name": "IPS Emax ZirCAD Prime (All-on-4)",
+    "priceVnd": 110000000
+  },
+  {
+    "name": "IPS Emax ZirCAD Prime (All-on-6)",
+    "priceVnd": 100000000
+  },
+  {
+    "name": "Jdental Care (Italy) Implant System (All-on-4) (2 Standard + 2 Zygomatic implant)",
+    "priceVnd": 229000000
+  },
+  {
+    "name": "Lava Premium Crown",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Lava Premium Crown on Implant",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Lava Premium Crown on RCT",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Lava Premium Crown on RCT Teeth",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Mild Periodontal Disease Treatment",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Misaligned Wisdom Tooth Extraction",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Moderate Periodontal Disease",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Moderated Periodontal Disease Treatment",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Molar Extraction (Provisional)",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Multi-Abutment",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Neodent (Strauman) Implant System (All-on-6) (4 Standard + 2 Pterygoid Implant)",
+    "priceVnd": 168000000
+  },
+  {
+    "name": "Neodent (Swiss) Abutment",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Neodent (Swiss) Implant",
+    "priceVnd": 20000000
+  },
+  {
+    "name": "Neodent (Swiss) Implant System (All-on-4)",
+    "priceVnd": 109000000
+  },
+  {
+    "name": "Neodent (Swiss) Implant System (All-on-6)",
+    "priceVnd": 158000000
+  },
+  {
+    "name": "Neodent (Swiss) Implant System (All-on-6) (4 Standard + 2 Pterygoid Implant)",
+    "priceVnd": 168000000
+  },
+  {
+    "name": "Neodent (Swiss) Zirconia Abutment",
+    "priceVnd": 7000000
+  },
+  {
+    "name": "Neodent Implant System (All-on-6)",
+    "priceVnd": 158000000
+  },
+  {
+    "name": "Neodent Implant System (All-on-6) (4 Standard + 2 Pterygoid Implant)",
+    "priceVnd": 269000000
+  },
+  {
+    "name": "Neodent Straumann (Swiss) Abutment",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Neodent Straumann (Swiss) Implant",
+    "priceVnd": 20000000
+  },
+  {
+    "name": "Neodent Straumann (Swiss) Implant System (All-on-4)",
+    "priceVnd": 109000000
+  },
+  {
+    "name": "Neodent Straumann (Swiss) Implant System (All-on-6)",
+    "priceVnd": 158000000
+  },
+  {
+    "name": "Neodent Straumann (Swiss) Implant System (All-on-6) (4 Standard + 2 Pterygoid Implant)",
+    "priceVnd": 168000000
+  },
+  {
+    "name": "Neodent Straumann Abutment",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Neodent Straumann Implant",
+    "priceVnd": 20000000
+  },
+  {
+    "name": "Neodent Straumann Implant System (All-on-4)",
+    "priceVnd": 109000000
+  },
+  {
+    "name": "Neodent Straumann Implant System (All-on-6) (4 Standard + 2 Pterygoid Implant)",
+    "priceVnd": 168000000
+  },
+  {
+    "name": "Night Guard",
+    "priceVnd": 2000000
+  },
+  {
+    "name": "Open Sinus Lift",
+    "priceVnd": 15000000
+  },
+  {
+    "name": "Open Sinus Lift (Provisional)",
+    "priceVnd": 15000000
+  },
+  {
+    "name": "Osstem (Korea) Abutment",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Osstem (Korea) Abutments",
+    "priceVnd": 3000000
+  },
+  {
+    "name": "Osstem (Korea) Implant",
+    "priceVnd": 12000000
+  },
+  {
+    "name": "Osstem (Korea) Implant System (All-on-6)",
+    "priceVnd": 12000000
+  },
+  {
+    "name": "Osstem (Korea) Zirconia Abutment",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Periodontal Disease Treatment",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Pre-molar Extraction (Provisional)",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Premolar Extraction",
+    "priceVnd": 1500000
+  },
+  {
+    "name": "Primary Teeth Extraction",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Re-root Canal Treatment for 2 Pulps",
+    "priceVnd": 4700000
+  },
+  {
+    "name": "Re-root Canal Treatment for 3 Pulps",
+    "priceVnd": 6200000
+  },
+  {
+    "name": "Removable Partial Denture",
+    "priceVnd": 6000000
+  },
+  {
+    "name": "Removale Partial Denture",
+    "priceVnd": 9000000
+  },
+  {
+    "name": "Root Canal Treatment for 1 Pulp",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Root Canal Treatment for 1 Pulp (Provisional)",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Root Canal Treatment for 1 Pulps (Provisional)",
+    "priceVnd": 3500000
+  },
+  {
+    "name": "Root Canal Treatment for 2 Pulp",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Root Canal Treatment for 2 Pulp (Provisional)",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Root Canal Treatment for 2 Pulps",
+    "priceVnd": 3500000
+  },
+  {
+    "name": "Root Canal Treatment for 2 Pulps (Provisional)",
+    "priceVnd": 3500000
+  },
+  {
+    "name": "Root Canal Treatment for 3 Pulp (Provisional)",
+    "priceVnd": 5000000
+  },
+  {
+    "name": "Root Canal Treatment for 3 Pulps",
+    "priceVnd": 5000000
+  },
+  {
+    "name": "Root Canal Treatment for 3 Pulps ( Provisional)",
+    "priceVnd": 5000000
+  },
+  {
+    "name": "Root Canal Treatment for 3 Pulps (Provisional)",
+    "priceVnd": 5000000
+  },
+  {
+    "name": "Root Extraction",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Scaling and Polishing",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Sinus Lift + Bone Graft",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Sinus Lift + Bone Graft (Provisional)",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Straight Wisdom Tooth Extraction (Provisional)",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Straumann SLA (Swiss) Abutment",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Straumann SLA (Swiss) Implant",
+    "priceVnd": 23500000
+  },
+  {
+    "name": "Straumann SLA Abutment",
+    "priceVnd": 8000000
+  },
+  {
+    "name": "Straumann SLA Implant",
+    "priceVnd": 23500000
+  },
+  {
+    "name": "Straumann SLA Implant System (All-on-4)",
+    "priceVnd": 129000000
+  },
+  {
+    "name": "Straumann SLActive Abutment",
+    "priceVnd": 10000000
+  },
+  {
+    "name": "Straumann SLActive Implant",
+    "priceVnd": 26500000
+  },
+  {
+    "name": "Straumann SLActive Implant System (All-on-4)",
+    "priceVnd": 149000000
+  },
+  {
+    "name": "Teeth Extraction",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Temporary Crown on Temporary Abutment",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Temporary Fixed Denture on Implant",
+    "priceVnd": 10000000
+  },
+  {
+    "name": "Temporary Fixed Denture on Implant (All-on-4)",
+    "priceVnd": 10000000
+  },
+  {
+    "name": "Temporary PMMA Crown",
+    "priceVnd": 500000
+  },
+  {
+    "name": "Temporary PMMA Crown (Provisional)",
+    "priceVnd": 500000
+  },
+  {
+    "name": "Temporary PMMA Crown on RCT Teeth",
+    "priceVnd": 500000
+  },
+  {
+    "name": "Temporary PMMA Crown RCT Teeth",
+    "priceVnd": 500000
+  },
+  {
+    "name": "Temporary Tooth on Temporary Abutment",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Tooth Extraction",
+    "priceVnd": 2500000
+  },
+  {
+    "name": "Tooth extraction (Provisional)",
+    "priceVnd": 1000000
+  },
+  {
+    "name": "Veneer E.max (IPS-CAD/CAM)",
+    "priceVnd": 10000000
+  },
+  {
+    "name": "Zirconia Post and Core",
+    "priceVnd": 2000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on Implant",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on RCT",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on RCT Teeth",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on RCT Teeth (Root Canal Treatment)",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on RCT Tooth",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Sagemax Crown on RTC Teeth",
+    "priceVnd": 4000000
+  },
+  {
+    "name": "Zirconia Teeth on Cast Frame",
+    "priceVnd": 54000000
+  },
+  {
+    "name": "Zirconia Teeth on Cast Frame for All-on-4 Implant",
+    "priceVnd": 54000000
+  },
+  {
+    "name": "Zirconia Teeth on Cast Frame for All-on-6 Implant",
+    "priceVnd": 59000000
+  }
+]

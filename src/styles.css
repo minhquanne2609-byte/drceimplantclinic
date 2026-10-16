@@ -1,0 +1,1875 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values using oklch.
+ * All colors MUST use oklch format.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ */
+
+@theme inline {
+  /* Pinned to a fixed, near-universal stack (not "system-ui"/"-apple-system"),
+     so `font-sans` renders as the exact same font on every computer — Windows,
+     Mac, and Linux all ship Arial and/or Helvetica with matching metrics.
+     Relying on the OS's own default UI font instead let the SAME layout wrap
+     text differently machine to machine (e.g. a phase title or table header
+     splitting onto an extra line only on some computers) purely because each
+     OS's default font has slightly different character widths. */
+  --font-sans: Arial, Helvetica, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.006 210);
+  --foreground: oklch(0.24 0.045 230);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.045 230);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.045 230);
+  --primary: oklch(0.44 0.088 228);
+  --primary-foreground: oklch(0.99 0.004 210);
+  --secondary: oklch(0.95 0.025 175);
+  --secondary-foreground: oklch(0.38 0.07 220);
+  --muted: oklch(0.955 0.012 210);
+  --muted-foreground: oklch(0.52 0.03 225);
+  --accent: oklch(0.74 0.11 158);
+  --accent-foreground: oklch(0.26 0.06 175);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.9 0.015 210);
+  --input: oklch(0.9 0.015 210);
+  --ring: oklch(0.55 0.09 220);
+  --chart-1: oklch(0.44 0.088 228);
+  --chart-2: oklch(0.74 0.11 158);
+  --chart-3: oklch(0.6 0.08 205);
+  --chart-4: oklch(0.82 0.08 160);
+  --chart-5: oklch(0.34 0.07 235);
+  --sidebar: oklch(0.98 0.008 210);
+  --sidebar-foreground: oklch(0.24 0.045 230);
+  --sidebar-primary: oklch(0.44 0.088 228);
+  --sidebar-primary-foreground: oklch(0.99 0.004 210);
+  --sidebar-accent: oklch(0.95 0.025 175);
+  --sidebar-accent-foreground: oklch(0.38 0.07 220);
+  --sidebar-border: oklch(0.9 0.015 210);
+  --sidebar-ring: oklch(0.55 0.09 220);
+  --hero-gradient: linear-gradient(
+    115deg,
+    oklch(0.24 0.06 232 / 92%) 0%,
+    oklch(0.38 0.085 220 / 74%) 45%,
+    oklch(0.62 0.1 165 / 22%) 100%
+  );
+  --accent-glow: oklch(0.82 0.12 160);
+}
+
+.dark {
+  --background: oklch(0.17 0.035 235);
+  --foreground: oklch(0.96 0.012 210);
+  --card: oklch(0.22 0.042 233);
+  --card-foreground: oklch(0.96 0.012 210);
+  --popover: oklch(0.22 0.042 233);
+  --popover-foreground: oklch(0.96 0.012 210);
+  --primary: oklch(0.6 0.095 220);
+  --primary-foreground: oklch(0.99 0.004 210);
+  --secondary: oklch(0.3 0.04 230);
+  --secondary-foreground: oklch(0.96 0.012 210);
+  --muted: oklch(0.3 0.04 230);
+  --muted-foreground: oklch(0.72 0.03 215);
+  --accent: oklch(0.76 0.12 158);
+  --accent-foreground: oklch(0.2 0.05 175);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.6 0.095 220);
+  --chart-1: oklch(0.6 0.095 220);
+  --chart-2: oklch(0.76 0.12 158);
+  --chart-3: oklch(0.68 0.08 205);
+  --chart-4: oklch(0.84 0.09 160);
+  --chart-5: oklch(0.5 0.08 235);
+  --sidebar: oklch(0.2 0.04 234);
+  --sidebar-foreground: oklch(0.96 0.012 210);
+  --sidebar-primary: oklch(0.6 0.095 220);
+  --sidebar-primary-foreground: oklch(0.99 0.004 210);
+  --sidebar-accent: oklch(0.3 0.04 230);
+  --sidebar-accent-foreground: oklch(0.96 0.012 210);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.6 0.095 220);
+  --hero-gradient: linear-gradient(
+    115deg,
+    oklch(0.15 0.04 235 / 95%) 0%,
+    oklch(0.26 0.07 225 / 86%) 45%,
+    oklch(0.5 0.09 165 / 28%) 100%
+  );
+  --accent-glow: oklch(0.82 0.12 160);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+/* ==========================================================================
+   USER TEXT-SIZE CONTROL
+   A visitor-facing toggle scales the root rem basis, so every Tailwind
+   text-* class grows together across the whole site. Real photos in this
+   app are sized with aspect-ratio + % width (not rem), so they keep their
+   natural size and never get "zoomed" — only the type scales.
+   Always reset to 100% for print so the tuned A4 print layout (below) is
+   never affected by the on-screen preference.
+   ========================================================================== */
+:root {
+  --user-font-scale: 1;
+}
+
+html {
+  font-size: calc(100% * var(--user-font-scale));
+}
+
+/* ==========================================================================
+   DEDICATED A4 PRINT MODE — international dental document
+   Screen layout is untouched; everything below applies to print/PDF only.
+   ========================================================================== */
+@media print {
+  html {
+    /* Ignore the visitor's on-screen text-size preference entirely so the
+       print stylesheet's hand-tuned px/mm values always render exactly as
+       designed — no reflow, no extra page breaks, no leftover gaps. */
+    font-size: 100% !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    width: 100% !important;
+  }
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    box-shadow: none !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+  /* Remove active accent-color highlight from the "Your Journey" step badges when printing */
+  .journey-nav span.bg-accent {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  .journey-nav span.border-accent {
+    border-color: currentColor !important;
+  }
+
+  /* --- Base typography scale tuned for A4 (no blunt page scaling) --- */
+  body {
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+  }
+  h1 {
+    font-size: 26px !important;
+    line-height: 1.15 !important;
+  }
+  h2 {
+    font-size: 22px !important;
+    line-height: 1.18 !important;
+  }
+  h3 {
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+  }
+  h4 {
+    font-size: 11.5px !important;
+  }
+  p,
+  li,
+  label,
+  span,
+  div,
+  td,
+  a {
+    font-size: inherit;
+  }
+  p,
+  li {
+    font-size: 10px !important;
+  }
+
+  /* Escape hatches for the blanket p/li/h4 sizing above: a handful of
+     sections (Journey Overview, Advanced Technology's 3 columns, the
+     Diagnosis headers) read as noticeably smaller than the surrounding body
+     copy once printed, because their own <p>/<li>/<h4> tags get silently
+     forced down to 10px/11.5px here regardless of their actual Tailwind
+     size — a class selector beats those plain-tag selectors even against
+     !important (same importance, higher specificity), which is what these
+     rely on. Sized to match the "Dear ..." message body copy (text-[2rem]
+     on screen). */
+  .print-text-2rem {
+    font-size: 2rem !important;
+  }
+  .print-text-1-75rem {
+    font-size: 1.75rem !important;
+  }
+  .print-text-3-5rem {
+    font-size: 3.5rem !important;
+  }
+
+  /* "Your Journey Overview" step badges: enlarged to match the print-text-*
+     classes above. Plain Tailwind print:* utilities (print:text-[2rem],
+     print:h-[92px], …) were tried here first and did not take effect at
+     all in print — they never even showed up in the compiled stylesheet's
+     @media print output — so sizing goes through dedicated classes plus
+     real CSS here instead, the same proven approach as print-text-2rem. */
+  .journey-step-badge {
+    height: 92px !important;
+    width: 92px !important;
+  }
+  .journey-badge-icon svg {
+    height: 24px !important;
+    width: 24px !important;
+  }
+  .journey-badge-number {
+    font-size: 1.5rem !important;
+  }
+  .journey-badge-title {
+    font-size: 2rem !important;
+  }
+  .journey-track {
+    top: 46px !important;
+  }
+
+  /* Tooth chart (Diagnosis): numbers and quadrant/group labels enlarged the
+     same way as above. The tooth icons themselves get a real but modest
+     bump, not matched to body-text size like the labels — all 8 teeth in a
+     quadrant have to fit side by side within one A4 page's printable width
+     (~186mm after margins), so there is a hard physical ceiling on how
+     wide each one can be before they clip off the page edge; this is
+     close to the safe maximum for that. */
+  .tooth-icon-molar {
+    width: 3.25rem !important;
+  }
+  .tooth-icon-premolar {
+    width: 2.75rem !important;
+  }
+  .tooth-icon-canine {
+    width: 2.625rem !important;
+  }
+  .tooth-icon-incisor {
+    width: 2.5rem !important;
+  }
+  .tooth-icon-h {
+    height: 5.25rem !important;
+  }
+  .tooth-row-gap {
+    gap: 6px !important;
+  }
+  .tooth-num-label {
+    font-size: 20px !important;
+  }
+  .tooth-quadrant-header {
+    font-size: 22px !important;
+  }
+  .tooth-group-label {
+    font-size: 15px !important;
+  }
+
+  /* Small editorial labels / eyebrows */
+  .tracking-\[0\.28em\],
+  .tracking-\[0\.22em\],
+  .tracking-\[0\.18em\] {
+    font-size: 8.5px !important;
+    letter-spacing: 0.18em !important;
+  }
+
+  /* --- Intelligent spacing reduction --- */
+  section {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+  .max-w-5xl,
+  .max-w-6xl,
+  .max-w-4xl {
+    max-width: 100% !important;
+  }
+  [class*="py-10"],
+  [class*="py-12"],
+  [class*="py-14"],
+  [class*="py-16"],
+  [class*="py-20"],
+  [class*="py-24"] {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+  [class*="p-8"],
+  [class*="p-10"],
+  [class*="p-12"] {
+    padding: 12px !important;
+  }
+  [class*="mt-10"],
+  [class*="mt-12"],
+  [class*="mt-14"],
+  [class*="mt-16"] {
+    margin-top: 10px !important;
+  }
+  [class*="gap-8"],
+  [class*="gap-10"],
+  [class*="gap-12"] {
+    gap: 10px !important;
+  }
+  .blur-3xl,
+  .blur-2xl {
+    display: none !important;
+  }
+  /* Wide letter-spacing can clip inside overflow-hidden bars when printed */
+  [class*="tracking-[0.2"],
+  [class*="tracking-[0.3"],
+  .tracking-widest {
+    letter-spacing: 0.12em !important;
+  }
+
+  /* --- Dedicated "Your Journey" print composition: compact 2-column grid --- */
+  .journey-nav .journey-steps {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    column-gap: 14px !important;
+    row-gap: 4px !important;
+  }
+  .journey-nav .journey-step {
+    padding: 8px 0 !important;
+    border: 0 !important;
+    border-top: 1px solid color-mix(in oklab, var(--primary) 18%, transparent) !important;
+    text-align: left !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .journey-nav .journey-step > div:first-child {
+    justify-content: flex-start !important;
+  }
+  .journey-nav .journey-step span[class*="text-3xl"],
+  .journey-nav .journey-step span[class*="text-4xl"] {
+    font-size: 20px !important;
+    color: color-mix(in oklab, var(--primary) 55%, transparent) !important;
+  }
+  .journey-nav .journey-step h3 {
+    font-size: 11.5px !important;
+    margin-top: 4px !important;
+  }
+  .journey-nav .journey-step p {
+    font-size: 9px !important;
+    margin-top: 2px !important;
+  }
+  /* View / arrow affordances are screen-only */
+  .journey-nav .journey-step > div:last-child {
+    display: none !important;
+  }
+  .journey-nav h2 {
+    font-size: 22px !important;
+  }
+
+  img,
+  picture,
+  svg,
+  video {
+    max-width: 100% !important;
+    max-height: 245mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  img:not(.object-cover):not([class*="object-cover"]) {
+    object-fit: contain;
+  }
+  .object-cover,
+  [class*="object-cover"] {
+    object-fit: cover !important;
+  }
+  /* Hero banner keeps a document-friendly height on A4 */
+  .print-hero {
+    height: 62mm !important;
+  }
+
+  /* Clinic photos print as one tight, edge-to-edge row regardless of screen layout. */
+  .clinic-print-gallery.is-collage {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  .clinic-print-gallery {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 1.5mm !important;
+    width: 100% !important;
+  }
+  .clinic-print-photo,
+  .clinic-print-photo > div,
+  .clinic-print-photo label {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .clinic-print-photo label {
+    aspect-ratio: 4 / 3 !important;
+  }
+  .clinic-print-photo img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    object-fit: cover !important;
+  }
+
+  /* Never split a card, panel, row or block across two pages */
+  header,
+  footer,
+  table,
+  thead,
+  tfoot,
+  tr,
+  td,
+  th,
+  figure,
+  li,
+  .avoid-break,
+  .journey-step,
+  [class*="rounded-\["],
+  [class*="rounded-2xl"],
+  [class*="rounded-3xl"],
+  [class*="rounded-xl"] {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  section {
+    break-before: auto;
+    break-after: auto;
+  }
+  thead {
+    display: table-header-group !important;
+  }
+  tfoot {
+    display: table-footer-group !important;
+  }
+  tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Tables must never be horizontally clipped when printing */
+  .overflow-x-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: auto;
+    font-size: 9px !important;
+  }
+  table td *,
+  table th * {
+    font-size: inherit !important;
+  }
+  .plan-table th {
+    font-size: 9px !important;
+  }
+  /* Keep the phase title glued to its table */
+  .plan-table thead {
+    break-after: avoid !important;
+  }
+
+  table td,
+  table th {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    white-space: normal !important;
+    min-width: 0 !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+    vertical-align: middle !important;
+  }
+  /* Treatment plan reads better with centred cells when printed */
+  .plan-table td,
+  .plan-table th {
+    vertical-align: middle !important;
+  }
+  .plan-table td *,
+  .plan-table th * {
+    vertical-align: middle;
+  }
+  .plan-table td:nth-child(4) {
+    text-align: center !important;
+  }
+
+  input,
+  textarea,
+  select {
+    min-width: 0 !important;
+  }
+  textarea {
+    height: auto !important;
+    overflow: visible !important;
+    resize: none !important;
+  }
+
+  /* Never clip or truncate any text in the printed plan */
+  * {
+    text-overflow: clip !important;
+    overflow-wrap: break-word;
+    hyphens: none;
+  }
+  .truncate {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+  p,
+  li,
+  span,
+  div,
+  td,
+  th,
+  label {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Screen-only chrome never reaches paper */
+  .no-print,
+  .no-print *,
+  [data-export="hide"],
+  button.no-print,
+  .sticky,
+  [class*="fixed"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* No horizontal overflow anywhere */
+  html,
+  body,
+  section,
+  div {
+    max-width: 100% !important;
+  }
+}
+
+/* ---- Full-length digital PDF export (one continuous document) ---- */
+body.fullpdf-export .no-print,
+body.fullpdf-export .no-print *,
+body.fullpdf-export [data-export="hide"],
+body.fullpdf-export .print\:hidden {
+  display: none !important;
+  visibility: hidden !important;
+}
+body.fullpdf-export .sticky,
+body.fullpdf-export .fixed {
+  display: none !important;
+}
+body.fullpdf-export .print\:block {
+  display: block !important;
+}
+body.fullpdf-export .print\:flex {
+  display: flex !important;
+}
+body.fullpdf-export .print\:inline {
+  display: inline !important;
+}
+body.fullpdf-export .print\:inline-block {
+  display: inline-block !important;
+}
+body.fullpdf-export .print\:table-cell {
+  display: table-cell !important;
+}
+body.fullpdf-export .overflow-x-auto,
+body.fullpdf-export .overflow-y-auto,
+body.fullpdf-export .overflow-hidden {
+  overflow: visible !important;
+  max-height: none !important;
+}
+body.fullpdf-export table {
+  width: 100% !important;
+  table-layout: auto !important;
+}
+body.fullpdf-export table td,
+body.fullpdf-export table th {
+  white-space: normal !important;
+  min-width: 0 !important;
+  overflow-wrap: break-word;
+}
+body.fullpdf-export .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+}
+body.fullpdf-export textarea {
+  height: auto !important;
+  overflow: hidden !important;
+  resize: none !important;
+}
+
+/* Every ordinary section is capped at the site's 2000px container, but the
+   Treatment Plan section widens on its own (it can grow past 2000px once it
+   has extra currency columns, many rows, or a long service name — see
+   PLAN_BASE_MAX_WIDTH/planServiceExtra in index.tsx). That makes the Full
+   PDF export look inconsistent: everything above/below Treatment Plan stays
+   narrower than the plan itself.
+
+   This has broken the Full PDF capture three different ways across this
+   project's history: stretching max-width alone left text looking thin and
+   stretched; `zoom` produced a fully blank page; this version (root
+   font-size instead of `zoom`) has produced visibly corrupted/striped
+   output at least once in real testing. It was reverted for that reason,
+   then explicitly restored again on request — kept in even knowing it can
+   fail this way, so if it produces a bad page again, that's the known,
+   accepted trade-off rather than a surprise. Screen layout and the separate
+   PNG export are untouched: this only ever applies while body.fullpdf-export
+   is set. */
+body.fullpdf-export .max-w-\[2000px\] {
+  max-width: var(--pdf-content-width, 2000px) !important;
+}
+html:has(body.fullpdf-export) {
+  font-size: calc(100% * var(--user-font-scale, 1) * var(--pdf-scale, 1)) !important;
+}
+
+/* The Treatment Plan's Service/Teeth columns (user-resizable, and now also
+   auto-widened by their own content — see the effect in index.tsx that
+   grows planColWidths.service to fit the longest service name) and each
+   currency column are fixed pixel widths, not rem — so the root font-size
+   scaling above grows their text without growing the columns to match,
+   squeezing them tighter than before. Scaling these pixel widths by the
+   same ratio keeps them in proportion with the now-larger text. */
+body.fullpdf-export .plan-col-service {
+  width: calc(var(--plan-col-service, 460px) * var(--pdf-scale, 1)) !important;
+}
+body.fullpdf-export .plan-col-teeth {
+  width: calc(var(--plan-col-teeth, 190px) * var(--pdf-scale, 1)) !important;
+}
+body.fullpdf-export .plan-col-amount {
+  width: calc(var(--plan-col-amount, 170px) * var(--pdf-scale, 1)) !important;
+}
+
+/* Diagnosis "Tooth chart & tooth conditions": the tooth numbers under the
+   chart and the plain Issues/Treatments/Note text below it (shown instead of
+   the on-screen tag editors) used tiny, mismatched sizes (12-17px) — legible
+   on screen next to the interactive pickers, but too small once printed as
+   plain text, and inconsistent with each other. Applies to Full PDF and the
+   standalone "Export Diagnosis" image (both walk this section with the
+   editors hidden and this plain text shown instead) — never the live editor. */
+body.fullpdf-export .dx-print-text,
+body.png-export .dx-print-text {
+  font-size: 1.375rem !important;
+}
+
+/* The tooth-conditions table's ambient text-[2rem] gives every table cell's
+   own line boxes a 48px "strut" (the invisible inline box every block
+   establishes at its own font's line-height, even when its actual content is
+   smaller). dx-print-text's 22px text still baseline-aligns to that 48px
+   strut by default, which visually sits it ~15px lower than the Tooth
+   column's number (sized straight off the same 2rem ambient, no smaller
+   nested text, so no strut mismatch) — misaligning rows that should read
+   left-to-right on one line. Top-aligning removes that baseline offset. */
+.dx-print-text {
+  vertical-align: top;
+}
+
+/* "Your Journey Overview" band: on screen, only the step the visitor has
+   scrolled to is shown filled in green (the rest are just outlined) — that
+   scroll-based state means nothing in a static PDF, where only whichever
+   step happened to be "active" at capture time ends up highlighted. Full
+   PDF only: show every step filled in, as if all steps were "active". */
+/* Journey Overview band in "Export full web": the section uses
+   max-w-[2000px] like every other section, so it widens together with
+   --pdf-content-width instead of staying narrow while --pdf-scale enlarges
+   its text (that mismatch made the step labels overlap). These rules keep
+   the 7 steps on one row and each label inside its own column. */
+body.fullpdf-export .journey-nav ol {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+}
+body.fullpdf-export .journey-nav ol > li {
+  min-width: 0;
+}
+body.fullpdf-export .journey-nav .journey-badge-title {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+body.fullpdf-export .journey-nav .journey-step-badge {
+  border-color: var(--accent) !important;
+  background-color: var(--accent) !important;
+  color: var(--primary) !important;
+}
+
+/* Each phase card's rounded corners rely on overflow-hidden as a clip mask
+   where its blue header bar's straight top-right edge meets the card's own
+   rounded corner. The general "overflow-hidden -> visible" override above
+   is needed so a wide table isn't clipped, but applied to this card too it
+   also switches off that clip mask, leaving a small notch of the card's
+   white background visible right at the corner. Now that each card is
+   explicitly widened to match its table (see equalizePhaseCardWidths in
+   index.tsx), nothing inside it actually needs to overflow anymore, so the
+   corner clip can safely stay on for this element specifically. */
+body.fullpdf-export [data-plan-phase-card] {
+  overflow: hidden !important;
+}
+
+/* Hero banner: on screen it's a fixed-height crop the admin can pan/zoom
+   (object-fit: cover plus a live pan/zoom transform) — exactly the point
+   day-to-day, since a banner usually only needs to show part of a wide
+   photo. But "Export full web" should always show the ENTIRE photo,
+   uncropped, with the heading directly below it, no matter what crop/zoom
+   was set on screen or how the browser happens to be zoomed. Letting the
+   box's height come from the image's own natural aspect ratio (instead of
+   a fixed px height) and switching to object-fit: contain, with any
+   pan/zoom cancelled, does that unconditionally. */
+body.fullpdf-export .print-hero {
+  height: auto !important;
+}
+body.fullpdf-export .print-hero img {
+  position: static !important;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  transform: none !important;
+}
+
+/* ---- PNG export of the treatment plan only ---- */
+.png-only {
+  display: none !important;
+}
+
+body.png-export .png-only {
+  display: block !important;
+  visibility: visible !important;
+}
+body.png-export .png-hide {
+  display: none !important;
+}
+
+body.png-export .no-print,
+body.png-export .no-print *,
+body.png-export [data-export="hide"],
+body.png-export .print\:hidden {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+body.png-export .print\:block {
+  display: block !important;
+  visibility: visible !important;
+}
+body.png-export .print\:inline {
+  display: inline !important;
+  visibility: visible !important;
+}
+body.png-export .print\:inline-block {
+  display: inline-block !important;
+  visibility: visible !important;
+}
+body.png-export .print\:flex {
+  display: flex !important;
+  visibility: visible !important;
+}
+body.png-export .print\:table-cell {
+  display: table-cell !important;
+  visibility: visible !important;
+}
+
+body.png-export .overflow-x-auto,
+body.png-export .overflow-y-auto,
+body.png-export .overflow-hidden {
+  overflow: visible !important;
+  max-height: none !important;
+}
+body.png-export table {
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+/* Same as the fullpdf-export rule above: the general "overflow-hidden ->
+   visible" rule switches off the rounded-corner clip mask on each phase
+   card, leaving a small white notch where the blue header bar's square edge
+   meets the card's rounded corner. During the plan capture the page root is
+   forced wide enough (see capturePlanPng in index.tsx) that the table
+   always fits its card, so the clip can safely stay on here too. This
+   selector is more specific than "body.png-export .overflow-hidden" so it
+   wins regardless of source order. */
+body.png-export [data-plan-phase-card].overflow-hidden {
+  overflow: hidden !important;
+}
+body.png-export table td,
+body.png-export table th {
+  white-space: normal !important;
+  min-width: 0 !important;
+  overflow-wrap: break-word;
+}
+body.png-export .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+}
+
+/* Treatment plan heading row in the plan image / plan-only PDF export.
+   On the page this is a space-between flex row: the eyebrow / title /
+   subtitle block on the left, the "Add phase" button on the right. The
+   button is hidden in the export, so the row must collapse to a plain
+   left-aligned block — otherwise the now-single child keeps the row's
+   width and a large blank band is left down its right side. */
+body.png-export .plan-head-row {
+  display: block !important;
+}
+body.png-export .plan-head-col {
+  width: 100% !important;
+}
+
+/* ---- Treatment plan grid table (clinical document look) ---- */
+.plan-table {
+  border-collapse: collapse;
+}
+.plan-table th,
+.plan-table td {
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
+}
+.plan-table th.border-0,
+.plan-table td.border-0 {
+  border: 0 !important;
+}
+.plan-table thead th {
+  border-color: color-mix(in oklab, white 35%, var(--primary));
+}
+
+/* Centred cells for the PNG export of the treatment plan */
+body.png-export .plan-table td,
+body.png-export .plan-table th {
+  vertical-align: middle !important;
+}
+body.png-export .plan-table td:nth-child(4) {
+  text-align: center !important;
+}
+body.png-export .plan-table td,
+body.png-export .plan-table th {
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+}
+
+/* ---------- Owner-authored rich text ----------
+   Content controls formatting of the selection; the design system keeps
+   ownership of font family, colour defaults and spacing rhythm. */
+.rich-text {
+  font-family: inherit;
+}
+.rich-text * {
+  font-family: inherit !important;
+}
+.rich-text b,
+.rich-text strong {
+  font-weight: 700;
+}
+.rich-text em,
+.rich-text i {
+  font-style: italic;
+}
+.rich-text u {
+  text-decoration: underline;
+}
+.rich-text s,
+.rich-text strike {
+  text-decoration: line-through;
+}
+.rich-text a {
+  color: var(--color-accent, currentColor);
+  text-decoration: underline;
+}
+.rich-text ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.35rem 0;
+}
+.rich-text ol {
+  list-style: decimal;
+  padding-left: 1.35rem;
+  margin: 0.35rem 0;
+}
+.rich-text li {
+  margin: 0.15rem 0;
+}
+.rich-text p {
+  margin: 0.35rem 0;
+}
+.rich-text p:first-child {
+  margin-top: 0;
+}
+.rich-text p:last-child {
+  margin-bottom: 0;
+}
+.rich-text blockquote {
+  border-left: 2px solid currentColor;
+  padding-left: 0.75rem;
+  opacity: 0.85;
+}
+.rich-text h1 {
+  font-size: 1.6em;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0.4em 0 0.25em;
+}
+.rich-text h2 {
+  font-size: 1.35em;
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 0.4em 0 0.25em;
+}
+.rich-text h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.35em 0 0.2em;
+}
+.rich-text h4 {
+  font-size: 1em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0.35em 0 0.2em;
+}
+.rich-text sup {
+  vertical-align: super;
+  font-size: 0.75em;
+}
+.rich-text sub {
+  vertical-align: sub;
+  font-size: 0.75em;
+}
+
+/* ==========================================================================
+   DEDICATED A4 PATIENT PROPOSAL (six-page editorial document)
+   A separate renderer — never the web page shrunk down.
+   ========================================================================== */
+.a4-shell {
+  background: color-mix(in oklab, var(--primary) 8%, #eef2f4);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.a4-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.a4-toolbar-title {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 13px;
+}
+.a4-toolbar-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.a4-toolbar-nav a {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 75%, transparent);
+}
+.a4-toolbar-nav a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.a4-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--muted);
+}
+.a4-btn--go {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.a4-scroll {
+  padding: 24px 12px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.a4-page {
+  position: relative;
+  width: 186mm;
+  height: 275mm;
+  background: #ffffff;
+  color: oklch(0.24 0.045 230);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 45px -25px rgba(0, 0, 0, 0.45);
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+.a4-watermark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 130mm;
+  max-width: 78%;
+  opacity: 0.12;
+  pointer-events: none;
+  object-fit: contain;
+  z-index: 50;
+  mix-blend-mode: multiply;
+}
+.a4-body {
+  position: relative;
+  z-index: 1;
+}
+
+.a4-body {
+  position: relative;
+  flex: 1;
+  padding: 14mm 14mm 6mm;
+  min-height: 0;
+}
+.a4-body--bleed {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.a4-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+.a4-kicker-num {
+  color: var(--primary);
+}
+.a4-kicker-rule {
+  width: 10mm;
+  height: 1px;
+  background: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.a4-h1 {
+  margin: 5mm 0 3mm;
+  font-size: 21pt;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--primary);
+}
+.a4-lead {
+  font-size: 9.5pt;
+  line-height: 1.55;
+  color: oklch(0.4 0.03 230);
+  max-width: 150mm;
+}
+.a4-sublabel {
+  margin: 6mm 0 2mm;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 75%, transparent);
+}
+.a4-rule {
+  width: 24mm;
+  height: 2px;
+  background: var(--accent);
+  margin: 4mm 0;
+}
+
+/* ---- footer ---- */
+.a4-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3mm 14mm 5mm;
+  font-size: 7.5pt;
+  color: color-mix(in oklab, var(--primary) 65%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--primary) 15%, transparent);
+}
+.a4-foot-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.a4-foot-brand img {
+  height: 4.5mm;
+  width: auto;
+  object-fit: contain;
+}
+.a4-foot-num {
+  font-weight: 800;
+  color: var(--primary);
+}
+
+/* ---- page 1: cover ---- */
+.a4-cover {
+  display: grid;
+  grid-template-columns: 1fr 0.82fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.a4-cover-left {
+  padding: 12mm 8mm 6mm 14mm;
+  overflow: hidden;
+}
+.a4-brandline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.a4-brandline img {
+  height: 9mm;
+  width: auto;
+  object-fit: contain;
+}
+.a4-brandline span {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 11pt;
+}
+.a4-cover-eyebrow {
+  margin-top: 8mm;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+.a4-cover-title {
+  margin-top: 3mm;
+  font-size: 22pt;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+.a4-cover-prepared {
+  margin-top: 7mm;
+  font-size: 9pt;
+  color: oklch(0.45 0.03 230);
+}
+.a4-cover-name {
+  font-size: 17pt;
+  font-weight: 700;
+  color: var(--primary);
+}
+.a4-cover-greeting {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 10pt;
+}
+.a4-cover-letter {
+  margin-top: 2mm;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: oklch(0.4 0.03 230);
+  display: -webkit-box;
+  -webkit-line-clamp: 18;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.a4-cover-meta {
+  margin-top: 6mm;
+  display: grid;
+  gap: 2mm;
+  font-size: 8pt;
+  color: oklch(0.45 0.03 230);
+}
+.a4-cover-meta li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.a4-cover-photo {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--primary) 5%, white);
+}
+.a4-cover-photo.is-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+}
+.a4-cover-photo.is-stack .a4-cover-slot {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.a4-cover-slot {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.a4-cover-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--a4-hero-fit, contain);
+  object-position: var(--a4-hero-pos, 50% 50%);
+}
+
+.a4-journeybar {
+  flex: 0 0 auto;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 8mm 14mm 7mm;
+}
+.a4-journeybar-title {
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, white 78%, var(--primary));
+}
+.a4-journeybar-steps {
+  margin-top: 6mm;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4mm;
+}
+.a4-journeybar-steps a {
+  display: grid;
+  justify-items: center;
+  gap: 2.5mm;
+  color: inherit;
+  text-align: center;
+}
+.a4-journeybar-dot {
+  width: 9mm;
+  height: 9mm;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, white 55%, transparent);
+  display: grid;
+  place-items: center;
+  font-size: 8pt;
+  font-weight: 700;
+}
+.a4-journeybar-label {
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.a4-journeybar-foot {
+  margin-top: 6mm;
+  padding-top: 3mm;
+  font-size: 7.5pt;
+  border-top: 1px solid color-mix(in oklab, white 30%, transparent);
+  color: color-mix(in oklab, white 80%, var(--primary));
+}
+
+/* ---- tables ---- */
+.a4-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 3mm;
+  font-size: 8.5pt;
+}
+.a4-table thead th {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2.4mm 2.6mm;
+  text-align: left;
+}
+.a4-table tbody td {
+  padding: 2.2mm 2.6mm;
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 14%, transparent);
+  vertical-align: middle;
+}
+.a4-table tbody tr:nth-child(even) td {
+  background: color-mix(in oklab, var(--primary) 4%, transparent);
+}
+.a4-c {
+  text-align: center;
+}
+.a4-td-name {
+  font-weight: 600;
+  text-align: center;
+}
+.a4-td-tooth {
+  text-align: center;
+}
+.a4-toothpill {
+  display: inline-grid;
+  place-items: center;
+  min-width: 7mm;
+  height: 7mm;
+  padding: 0 1.5mm;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 35%, white);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 8pt;
+}
+.a4-subtotal td {
+  background: color-mix(in oklab, var(--primary) 10%, white) !important;
+  font-weight: 700;
+  color: var(--primary);
+}
+.a4-phase {
+  margin-top: 5mm;
+  break-inside: avoid;
+}
+.a4-phase-title {
+  font-size: 8.5pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.a4-grand {
+  margin-top: 6mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6mm;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 4.5mm 6mm;
+  border-radius: 2mm;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.a4-grand-vnd {
+  font-size: 13pt;
+  color: color-mix(in oklab, var(--accent) 70%, white);
+}
+.a4-grand-fx {
+  font-size: 11pt;
+  color: color-mix(in oklab, white 85%, var(--primary));
+}
+.a4-fineprint {
+  margin-top: 2.5mm;
+  font-size: 7.5pt;
+  color: oklch(0.5 0.03 230);
+}
+
+.a4-chart {
+  margin-top: 2mm;
+}
+.a4-chart svg {
+  max-height: 34mm;
+}
+
+/* ---- page 3: journey ---- */
+.a4-steps {
+  margin-top: 8mm;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3mm;
+  text-align: center;
+  position: relative;
+}
+.a4-steps li {
+  display: grid;
+  justify-items: center;
+  gap: 1.5mm;
+  position: relative;
+  padding: 0 1mm;
+}
+.a4-steps li + li::before {
+  content: "";
+  position: absolute;
+  top: 6mm;
+  left: -50%;
+  width: 100%;
+  height: 1px;
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.a4-step-icon {
+  position: relative;
+  z-index: 1;
+  width: 12mm;
+  height: 12mm;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
+  color: var(--primary);
+}
+.a4-step-num {
+  font-size: 8.5pt;
+  font-weight: 800;
+  color: color-mix(in oklab, var(--primary) 55%, white);
+}
+.a4-step-title {
+  font-size: 9pt;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.25;
+}
+.a4-step-sub {
+  font-size: 7.5pt;
+  line-height: 1.35;
+  color: oklch(0.5 0.03 230);
+}
+
+.a4-facts {
+  margin-top: 9mm;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5mm;
+  padding: 5mm 6mm;
+  border-radius: 2mm;
+  background: color-mix(in oklab, var(--primary) 5%, white);
+  border: 1px solid color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.a4-fact {
+  display: flex;
+  gap: 3mm;
+  align-items: start;
+  color: var(--primary);
+}
+.a4-fact-k {
+  font-size: 7.5pt;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.a4-fact-v {
+  margin-top: 1.5mm;
+  font-size: 10pt;
+  font-weight: 700;
+  color: oklch(0.32 0.05 220);
+}
+.a4-fact-s {
+  font-size: 7.5pt;
+  color: oklch(0.5 0.03 230);
+}
+
+.a4-support {
+  margin-top: 5mm;
+  display: flex;
+  gap: 3mm;
+  align-items: center;
+  padding: 4mm 5mm;
+  border-radius: 2mm;
+  color: var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary) 14%, transparent);
+}
+.a4-support p {
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: oklch(0.38 0.03 230);
+}
+
+.a4-journey {
+  margin-top: 8mm;
+  display: grid;
+  gap: 3mm;
+}
+.a4-journey li {
+  display: grid;
+  grid-template-columns: 12mm 1fr;
+  align-items: start;
+  gap: 3mm;
+  padding-top: 3mm;
+  border-top: 1px solid color-mix(in oklab, var(--primary) 16%, transparent);
+}
+.a4-journey-num {
+  font-size: 13pt;
+  font-weight: 800;
+  color: color-mix(in oklab, var(--primary) 45%, white);
+}
+.a4-journey-title {
+  font-size: 10pt;
+  font-weight: 700;
+  color: var(--primary);
+}
+.a4-journey-note {
+  margin-top: 1mm;
+  font-size: 8pt;
+  line-height: 1.45;
+  color: oklch(0.42 0.03 230);
+}
+.a4-journey-list {
+  margin-top: 1.5mm;
+  font-size: 8pt;
+  color: oklch(0.5 0.03 230);
+}
+
+.a4-callout {
+  margin-top: 7mm;
+  padding: 5mm 6mm;
+  border-radius: 2mm;
+  background: color-mix(in oklab, var(--accent) 16%, white);
+  border-left: 3px solid var(--accent);
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: oklch(0.35 0.04 220);
+}
+.a4-callout-title {
+  font-size: 8pt;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 1.5mm;
+}
+
+/* ---- page 5: benefits ---- */
+.a4-benefits {
+  margin-top: 5mm;
+  columns: 2;
+  column-gap: 8mm;
+  column-fill: auto;
+}
+.a4-benefit {
+  display: grid;
+  grid-template-columns: 9mm 1fr;
+  gap: 3mm;
+  align-items: start;
+  padding: 2.6mm 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 10%, transparent);
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+
+.a4-benefit-icon {
+  width: 8mm;
+  height: 8mm;
+  border-radius: 1.5mm;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 7%, white);
+}
+.a4-benefit-title {
+  font-size: 8.5pt;
+  font-weight: 700;
+  color: oklch(0.3 0.04 225);
+  line-height: 1.3;
+}
+.a4-benefit-line {
+  font-size: 7.5pt;
+  line-height: 1.35;
+  color: oklch(0.5 0.03 230);
+}
+.a4-benefit-value {
+  font-size: 7.5pt;
+  font-weight: 700;
+  line-height: 1.35;
+  color: color-mix(in oklab, var(--primary) 80%, black);
+}
+.a4-conditions {
+  margin-top: 6mm;
+  padding: 4mm 5mm;
+  border-radius: 2mm;
+  border: 1px solid color-mix(in oklab, var(--primary) 14%, transparent);
+  font-size: 8pt;
+  line-height: 1.5;
+  color: oklch(0.42 0.03 230);
+}
+.a4-conditions-title {
+  font-size: 7.5pt;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 1.5mm;
+}
+
+/* ---- page 6: clinic ---- */
+.a4-clinic {
+  margin-top: 4mm;
+  display: grid;
+  grid-template-columns: 1fr 0.95fr;
+  gap: 7mm;
+  align-items: start;
+}
+.a4-clinic-meta {
+  margin-top: 4mm;
+  display: grid;
+  gap: 2mm;
+  font-size: 8pt;
+  color: oklch(0.45 0.03 230);
+}
+.a4-clinic-meta li {
+  display: flex;
+  gap: 5px;
+  align-items: start;
+}
+.a4-photos {
+  display: grid;
+  gap: 2mm;
+}
+.a4-photo {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1.5mm;
+}
+.a4-photos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 1.5mm;
+}
+.a4-next {
+  margin-top: 7mm;
+  padding: 6mm;
+  border-radius: 2mm;
+  background: color-mix(in oklab, var(--primary) 7%, white);
+  border: 1px solid color-mix(in oklab, var(--primary) 18%, transparent);
+}
+.a4-next-title {
+  font-size: 11pt;
+  font-weight: 800;
+  color: var(--primary);
+}
+.a4-next-sub {
+  margin-top: 1.5mm;
+  font-size: 8.5pt;
+  color: oklch(0.45 0.03 230);
+}
+.a4-contacts {
+  margin-top: 5mm;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4mm;
+}
+.a4-contacts a {
+  display: flex;
+  align-items: start;
+  gap: 5px;
+  color: var(--primary);
+  font-size: 8pt;
+  font-weight: 600;
+}
+.a4-contacts em {
+  display: block;
+  font-style: normal;
+  font-size: 7pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 60%, transparent);
+}
+.a4-signoff {
+  margin-top: 7mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6mm;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 5mm 6mm;
+  border-radius: 2mm;
+}
+.a4-signoff-title {
+  font-size: 10pt;
+  font-weight: 700;
+}
+.a4-signoff-sub {
+  font-size: 7.5pt;
+  color: color-mix(in oklab, white 80%, var(--primary));
+}
+.a4-signoff img {
+  height: 10mm;
+  width: auto;
+  object-fit: contain;
+  background: white;
+  border-radius: 1.5mm;
+  padding: 1mm 2mm;
+}
+
+/* ---- A4 print: only the proposal reaches paper ---- */
+@media print {
+  body.a4-mode #web-root,
+  body.a4-mode .a4-toolbar {
+    display: none !important;
+  }
+  body.a4-mode .a4-shell {
+    position: static !important;
+    overflow: visible !important;
+    background: #fff !important;
+    display: block !important;
+  }
+  body.a4-mode .a4-scroll {
+    padding: 0 !important;
+    display: block !important;
+    gap: 0 !important;
+  }
+  body.a4-mode .a4-page {
+    width: 186mm !important;
+    height: 275mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    display: flex !important;
+    font-size: 10.5pt !important;
+  }
+  body.a4-mode .a4-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  body.a4-mode .a4-page p,
+  body.a4-mode .a4-page li,
+  body.a4-mode .a4-page td,
+  body.a4-mode .a4-page th,
+  body.a4-mode .a4-page span,
+  body.a4-mode .a4-page div {
+    font-size: inherit;
+  }
+  body.a4-mode .a4-page h1,
+  body.a4-mode .a4-page h2 {
+    font-size: inherit !important;
+  }
+  body.a4-mode .a4-page h1.a4-cover-title {
+    font-size: 22pt !important;
+  }
+  body.a4-mode .a4-page h2.a4-h1 {
+    font-size: 21pt !important;
+  }
+  body.a4-mode .a4-cover-photo img {
+    position: absolute !important;
+    inset: 0 !important;
+    object-fit: var(--a4-hero-fit, contain) !important;
+    object-position: var(--a4-hero-pos, 50% 50%) !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+  body.a4-mode .a4-photos img {
+    height: 100% !important;
+  }
+  body.a4-mode .a4-page .a4-lead,
+  body.a4-mode .a4-page .a4-cover-letter {
+    font-size: 9.5pt !important;
+  }
+  body.a4-mode .a4-page .a4-table {
+    font-size: 8.5pt !important;
+  }
+  body.a4-mode .a4-page .a4-table th {
+    font-size: 7.5pt !important;
+  }
+  body.a4-mode .a4-page img {
+    max-height: none !important;
+  }
+  body.a4-mode .a4-page section {
+    padding: 0 !important;
+  }
+}
