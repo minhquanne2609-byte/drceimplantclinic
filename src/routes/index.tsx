@@ -6131,6 +6131,87 @@ function PlanPage({ content }: { content: ContentMap }) {
                     </div>
                   </div>
 
+                  {pi === 0 && (
+                    <>
+                  {/* Hotel support: manual deductions under Phase 1, subtracted from the grand total */}
+                  <div
+                    data-plan-phase-card
+                    className={`avoid-break rounded-2xl border-2 border-primary/30 bg-card shadow-lg overflow-hidden ${
+                      hotelSupports.length === 0 || printScope !== "all" ? "print:hidden" : ""
+                    } ${hotelSupports.length === 0 ? "png-hide" : ""}`}
+                  >
+                    {hotelSupports.length > 0 && (
+                      <div>
+                        {hotelSupports.map((h) => (
+                          <div
+                            key={h.id}
+                            className="grid items-center border-b border-primary/15 last:border-b-0"
+                            style={{ gridTemplateColumns: `minmax(0,1fr) repeat(${cols.length}, minmax(22rem, 34rem))` }}
+                          >
+                            <div className="px-6 py-3 flex items-center gap-3">
+                              <input
+                                type="text"
+                                value={h.label}
+                                onChange={(e) => updateHotelSupport(h.id, { label: e.target.value })}
+                                className="flex-1 min-w-0 bg-transparent outline-none border-b border-dotted border-border focus:border-primary text-[1.75rem] md:text-[2rem] font-semibold text-foreground print:hidden"
+                              />
+                              <span className="hidden print:inline text-[1.75rem] md:text-[2rem] font-semibold text-foreground">
+                                {h.label}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeHotelSupport(h.id)}
+                                title="Remove hotel support"
+                                className="print:hidden shrink-0 text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                            {cols.map((col) => (
+                              <div
+                                key={col.id}
+                                className="px-4 py-3 text-center tabular-nums text-[1.75rem] md:text-[2rem] text-destructive font-semibold border-l-2 border-primary/15"
+                              >
+                                {col.kind === "vnd" && (
+                                  <>
+                                    <span>−</span>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={h.vnd ? fmtInt(h.vnd) : ""}
+                                      placeholder="0"
+                                      onChange={(e) =>
+                                        updateHotelSupport(h.id, { vnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0 })
+                                      }
+                                      className="w-52 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
+                                    />
+                                    <span className="hidden print:inline">{fmtInt(h.vnd || 0)}</span>
+                                  </>
+                                )}
+                                {col.kind === "fx" && `−${fmtNum((h.vnd || 0) * (rates[col.currency ?? "AUD"] ?? 0))}`}
+                                {col.kind === "custom" && "—"}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between px-4 py-4 print:hidden png-hide">
+                      <button
+                        type="button"
+                        onClick={addHotelSupport}
+                        className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
+                      >
+                        <Plus size={28} /> Add hotel support
+                      </button>
+                      <div className="text-[1.5rem] text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                        Tip: amount is deducted from the TOTAL below · the phase prices stay unchanged
+                      </div>
+                    </div>
+                  </div>
+                    </>
+                  )}
+
                   {/* Note between this phase and the next (e.g. healing time) */}
                   {pi < phases.length - 1 && (
                     <div className="avoid-break rounded-2xl border-2 border-dashed border-accent/50 bg-accent/10 px-6 py-4 flex items-start gap-3">
@@ -6150,83 +6231,6 @@ function PlanPage({ content }: { content: ContentMap }) {
                 </div>
               );
             })}
-          </div>
-
-          {/* Hotel support: manual deductions applied before the grand total */}
-          <div
-            data-plan-phase-card
-            className={`mt-8 avoid-break rounded-2xl border-2 border-primary/30 bg-card shadow-lg overflow-hidden ${
-              hotelSupports.length === 0 || printScope !== "all" ? "print:hidden" : ""
-            } ${hotelSupports.length === 0 ? "png-hide" : ""}`}
-          >
-            {hotelSupports.length > 0 && (
-              <div>
-                {hotelSupports.map((h) => (
-                  <div
-                    key={h.id}
-                    className="grid items-center border-b border-primary/15 last:border-b-0"
-                    style={{ gridTemplateColumns: `minmax(0,1fr) repeat(${cols.length}, minmax(22rem, 34rem))` }}
-                  >
-                    <div className="px-6 py-3 flex items-center gap-3">
-                      <input
-                        type="text"
-                        value={h.label}
-                        onChange={(e) => updateHotelSupport(h.id, { label: e.target.value })}
-                        className="flex-1 min-w-0 bg-transparent outline-none border-b border-dotted border-border focus:border-primary text-[1.75rem] md:text-[2rem] font-semibold text-foreground print:hidden"
-                      />
-                      <span className="hidden print:inline text-[1.75rem] md:text-[2rem] font-semibold text-foreground">
-                        {h.label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeHotelSupport(h.id)}
-                        title="Remove hotel support"
-                        className="print:hidden shrink-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                    {cols.map((col) => (
-                      <div
-                        key={col.id}
-                        className="px-4 py-3 text-center tabular-nums text-[1.75rem] md:text-[2rem] text-destructive font-semibold border-l-2 border-primary/15"
-                      >
-                        {col.kind === "vnd" && (
-                          <>
-                            <span>−</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={h.vnd ? fmtInt(h.vnd) : ""}
-                              placeholder="0"
-                              onChange={(e) =>
-                                updateHotelSupport(h.id, { vnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0 })
-                              }
-                              className="w-52 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
-                            />
-                            <span className="hidden print:inline">{fmtInt(h.vnd || 0)}</span>
-                          </>
-                        )}
-                        {col.kind === "fx" && `−${fmtNum((h.vnd || 0) * (rates[col.currency ?? "AUD"] ?? 0))}`}
-                        {col.kind === "custom" && "—"}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center justify-between px-4 py-4 print:hidden png-hide">
-              <button
-                type="button"
-                onClick={addHotelSupport}
-                className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
-              >
-                <Plus size={28} /> Add hotel support
-              </button>
-              <div className="text-[1.5rem] text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                Tip: amount is deducted from the TOTAL below · the phase prices stay unchanged
-              </div>
-            </div>
           </div>
 
           {/* Grand total */}
