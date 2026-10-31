@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageUp, Loader2, X, AlertTriangle, Check } from "lucide-react";
-import { extractPlanFromImage, type ImportedPlan } from "@/lib/plan-import";
+import { readPlanFromImage, type ImportedPlan } from "@/lib/plan-ocr";
 
 export type ReviewedRow = {
   key: string;
@@ -24,36 +24,16 @@ type Props = {
   onApply: (result: ImportResult) => void;
 };
 
-const CODE_KEY = "dci-import-code";
 let seq = 0;
 const k = () => `i${++seq}`;
-
-/** Downscale + re-encode so phone photos stay well under the upload limit. */
-async function prepareImage(file: File): Promise<{ base64: string; mediaType: "image/jpeg"; preview: string }> {
-  const bmp = await createImageBitmap(file);
-  const MAX = 1800;
-  const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
-  const w = Math.max(1, Math.round(bmp.width * scale));
-  const h = Math.max(1, Math.round(bmp.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Could not process the image.");
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, w, h);
-  ctx.drawImage(bmp, 0, 0, w, h);
-  bmp.close?.();
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-  return { base64: dataUrl.split(",")[1] ?? "", mediaType: "image/jpeg", preview: dataUrl };
-}
 
 export function PlanImportButton({ catalogNames, onApply }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [prepared, setPrepared] = useState<{ base64: string; mediaType: "image/jpeg" } | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState("");
   const [patientName, setPatientName] = useState("");
   const [applyName, setApplyName] = useState(true);
   const [phases, setPhases] = useState<ReviewedPhase[] | null>(null);
@@ -64,7 +44,8 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
     setBusy(false);
     setError("");
     setPreview(null);
-    setPrepared(null);
+    setFile(null);
+    setProgress("");
     setPatientName("");
     setApplyName(true);
     setPhases(null);
@@ -75,18 +56,17 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
     reset();
   };
 
-  const loadFile = async (file: File | undefined | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+  const loadFile = async (f: File | undefined | null) => {
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
       setError("Please choose an image file (JPG, PNG, WebP…).");
       return;
     }
     setError("");
     setPhases(null);
     try {
-      const p = await prepareImage(file);
-      setPreview(p.preview);
-      setPrepared({ base64: p.base64, mediaType: p.mediaType });
+      setPreview(URL.createObjectURL(f));
+      setFile(f);
     } catch {
       setError("Could not open this image. Try a JPG or PNG.");
     }
@@ -118,7 +98,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
           const exact = r.catalogName ? lower.get(r.catalogName.trim().toLowerCase()) : undefined;
           return {
             key: k(),
-            use: true,
+            use: !!exact,
             name: exact ?? r.name,
             matched: !!exact,
             tooth: r.tooth,
@@ -130,43 +110,23 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
     );
   };
 
-  const read = async (code?: string) => {
-    if (!prepared) return;
+  const read = async () => {
+    if (!file) return;
     setBusy(true);
     setError("");
+    setProgress("Starting…");
     try {
-      const plan = await extractPlanFromImage({
-        data: {
-          imageBase64: prepared.base64,
-          mediaType: prepared.mediaType,
-          catalogNames,
-          accessCode: code ?? (typeof localStorage !== "undefined" ? (localStorage.getItem(CODE_KEY) ?? "") : ""),
-        },
-      });
+      const plan = await readPlanFromImage(file, catalogNames, setProgress);
       if (!plan.patientName && plan.phases.length === 0) {
-        setError("Nothing recognisable was found. Try a sharper or closer image.");
+        setError("Nothing recognisable was found. Try a sharper, larger or straighter image (a screenshot works best).");
       } else {
         toReview(plan);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      if (msg.includes("ACCESS_CODE_REQUIRED")) {
-        const entered = window.prompt("Enter the import access code:");
-        if (entered) {
-          try {
-            localStorage.setItem(CODE_KEY, entered);
-          } catch {
-            /* ignore */
-          }
-          setBusy(false);
-          return read(entered);
-        }
-        setError("An access code is required for this feature.");
-      } else {
-        setError(msg || "Something went wrong while reading the image.");
-      }
+      setError(e instanceof Error ? e.message : "Something went wrong while reading the image.");
     } finally {
       setBusy(false);
+      setProgress("");
     }
   };
 
@@ -218,7 +178,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
               <div>
                 <h2 className="font-bold text-primary text-lg">Import treatment plan from a photo</h2>
                 <p className="text-xs text-muted-foreground">
-                  Upload (or paste with Ctrl+V) a photo or screenshot. You can review and fix everything before it is added.
+                  Upload (or paste with Ctrl+V) a photo or screenshot. It is read on this computer — nothing is uploaded. Check and fix everything before adding.
                 </p>
               </div>
               <button onClick={close} className="p-1.5 rounded-full hover:bg-muted" aria-label="Close">
@@ -261,7 +221,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
                     </button>
                     <button
                       onClick={() => void read()}
-                      disabled={!prepared || busy}
+                      disabled={!file || busy}
                       className="px-5 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"
                     >
                       {busy ? <Loader2 size={15} className="animate-spin" /> : null}
@@ -270,6 +230,8 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
                   </div>
                 </div>
               )}
+
+              {busy && progress && <p className="text-sm text-muted-foreground text-center">{progress}</p>}
 
               {error && (
                 <div className="flex items-start gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2 text-sm">
@@ -318,7 +280,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
                             />
                             <span
                               className="w-[5.5rem] shrink-0 text-[11px] leading-tight"
-                              title={r.matched ? "Matched a service in your catalog" : "Not in your catalog — added as typed, price 0"}
+                              title={r.matched ? "Matched a service in your catalog" : "Not matched to your catalog — tick it to add as typed (price 0)"}
                             >
                               {r.matched ? (
                                 <span className="text-emerald-700 flex items-center gap-0.5">
