@@ -146,6 +146,7 @@ import {
 } from "@/lib/plan-rules";
 import { useLiveRates, CURRENCY_CODES } from "@/lib/currency";
 import { SavedPlansBar } from "@/components/SavedPlans";
+import { PlanImportButton, type ImportResult } from "@/components/PlanImportDialog";
 import { PatientJourneyNav } from "@/components/PatientJourneyNav";
 import { SectionHeading } from "@/components/SectionHeading";
 import { PhotoCollage } from "@/components/PhotoCollage";
@@ -3065,25 +3066,11 @@ function PlanPage({ content }: { content: ContentMap }) {
 
   const removePhase = (id: string) => setPhases((p) => p.filter((ph) => ph.id !== id));
 
-  // Hotel support: manual deductions (VND) subtracted from the grand TOTAL
-  // (e.g. the clinic covers part of the patient's hotel for the 2 trips).
-  const [hotelSupports, setHotelSupports] = useState<{ id: string; label: string; vnd: number }[]>([]);
-  const addHotelSupport = () =>
-    setHotelSupports((h) => [...h, { id: uid(), label: "Hotel support", vnd: 0 }]);
-  const updateHotelSupport = (id: string, patch: Partial<{ label: string; vnd: number }>) =>
-    setHotelSupports((h) => h.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  const removeHotelSupport = (id: string) => setHotelSupports((h) => h.filter((x) => x.id !== id));
-  const hotelTotalVnd = useMemo(
-    () => hotelSupports.reduce((sum, h) => sum + (Number(h.vnd) || 0), 0),
-    [hotelSupports],
-  );
-
-  const phasesSubtotal = useMemo(() => {
+  const grandTotals = useMemo(() => {
     let vnd = 0;
     for (const ph of phases) for (const r of ph.rows) vnd += rowVnd(r);
-    return vnd;
+    return { vnd };
   }, [phases]);
-  const grandTotals = useMemo(() => ({ vnd: Math.max(0, phasesSubtotal - hotelTotalVnd) }), [phasesSubtotal, hotelTotalVnd]);
   const grandFx = (col: Col) => grandTotals.vnd * (rates[col.currency ?? "AUD"] ?? 0);
 
   // ----- Export scope: all phases or a single phase -----
@@ -4340,7 +4327,6 @@ function PlanPage({ content }: { content: ContentMap }) {
     gallery,
     cols,
     phases,
-    hotelSupports,
   };
   const restoreSnapshot = (s: any) => {
     setPriceSheets(s.priceSheets);
@@ -4392,7 +4378,6 @@ function PlanPage({ content }: { content: ContentMap }) {
     setGallery(s.gallery);
     setCols(s.cols);
     setPhases(s.phases);
-    setHotelSupports(s.hotelSupports ?? []);
   };
   const { undo, redo, clearHistory, canUndo, canRedo } = useUndoRedo(undoSnapshot, restoreSnapshot);
 
@@ -4408,6 +4393,41 @@ function PlanPage({ content }: { content: ContentMap }) {
     setOffersHeading(content.patient_benefits.title);
     setOfferIntro(content.patient_benefits.body);
     setOffers(content.patient_benefits.items.map((it, i) => ({ id: `o${i + 1}`, ...it })));
+  };
+
+  // Fill the plan from a photo/screenshot (see PlanImportDialog). Rows are plain
+  // rows — prices come from the clinic catalog when the service matches it,
+  // otherwise from the price printed on the image, otherwise 0 (editable).
+  const applyImportedPlan = (res: ImportResult) => {
+    if (res.patientName) {
+      const nm = res.patientName;
+      setPatient((p) => ({ ...p, fullName: nm }));
+      // The page greeting ("Dear …,") is what names the plan/file, so keep it in step.
+      setGreeting(`Dear ${nm},`);
+    }
+    if (res.phases.length === 0) return;
+    const build = (offset: number): Phase[] =>
+      res.phases.map((ph, i) => ({
+        id: uid(),
+        title: ph.title ?? `Phase ${offset + i + 1} — Treatment`,
+        rows: ph.rows.map((r) => {
+          const free = isInPackageService(r.name);
+          return {
+            id: uid(),
+            name: r.name,
+            tooth: r.tooth,
+            qty: r.qty,
+            unitVnd: free
+              ? null
+              : isRemovablePartialDenture(r.name)
+                ? RPD_BASE_VND
+                : (catalogPrice(r.name) ?? r.unitPriceVnd ?? 0),
+            discount: qualifiesForTempDentureDiscount(r.name) ? autoDiscountVnd(r.name, r.qty) : 0,
+          } satisfies Row;
+        }),
+      }));
+    if (res.mode === "replace") setPhases(build(0));
+    else setPhases((p) => [...p, ...build(p.length)]);
   };
 
   // ----- "Clear cache" — free memory after a long session / many exports -----
@@ -4541,6 +4561,8 @@ function PlanPage({ content }: { content: ContentMap }) {
               </div>
 
               <SavedPlansBar getSnapshot={() => undoSnapshot} restore={restoreSavedPlan} patientName={displayName} />
+
+              <PlanImportButton catalogNames={catalog.items.map((i) => i.name)} onApply={applyImportedPlan} />
 
               {contentManager && (
                 <Link
@@ -6110,61 +6132,6 @@ function PlanPage({ content }: { content: ContentMap }) {
                                   ))}
                                   <td className="print:hidden border-0" />
                                 </tr>
-                                {pi === 0 &&
-                                  hotelSupports.map((h) => (
-                                    <tr
-                                      key={h.id}
-                                      className={`bg-card font-bold text-foreground text-[3rem] border-t border-border ${
-                                        printScope === "all" ? "" : "print:hidden"
-                                      }`}
-                                    >
-                                      <td className="py-3 px-3 print:hidden border-0" />
-                                      <td className="py-2.5 px-3 text-center" colSpan={6}>
-                                        <input
-                                          type="text"
-                                          value={h.label}
-                                          onChange={(e) => updateHotelSupport(h.id, { label: e.target.value })}
-                                          className="w-full bg-transparent outline-none border-b border-dotted border-transparent focus:border-primary uppercase font-bold text-[3rem] text-center print:hidden"
-                                        />
-                                        <span className="hidden print:inline uppercase">{h.label}</span>
-                                      </td>
-                                      {cols.map((col) => (
-                                        <td key={col.id} className="py-3 px-3 text-center tabular-nums whitespace-nowrap">
-                                          {col.kind === "vnd" && (
-                                            <>
-                                              <span>−</span>
-                                              <input
-                                                type="text"
-                                                inputMode="numeric"
-                                                value={h.vnd ? fmtInt(h.vnd) : ""}
-                                                placeholder="0"
-                                                onChange={(e) =>
-                                                  updateHotelSupport(h.id, {
-                                                    vnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
-                                                  })
-                                                }
-                                                className="w-[9ch] text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary font-bold text-[3rem] print:hidden"
-                                              />
-                                              <span className="hidden print:inline">{fmtInt(h.vnd || 0)}</span>
-                                            </>
-                                          )}
-                                          {col.kind === "fx" &&
-                                            `−${fmtNum((h.vnd || 0) * (rates[col.currency ?? "AUD"] ?? 0))}`}
-                                          {col.kind === "custom" && "—"}
-                                        </td>
-                                      ))}
-                                      <td className="print:hidden border-0 px-2">
-                                        <button
-                                          type="button"
-                                          onClick={() => removeHotelSupport(h.id)}
-                                          title="Remove hotel support"
-                                          className="text-muted-foreground hover:text-destructive"
-                                        >
-                                          <Trash2 size={20} />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
                               </tfoot>
                             </table>
                           </div>
@@ -6181,17 +6148,6 @@ function PlanPage({ content }: { content: ContentMap }) {
                               overridden
                             </div>
                           </div>
-                          {pi === 0 && (
-                            <div className="px-4 pb-4 print:hidden" data-export="hide">
-                              <button
-                                type="button"
-                                onClick={addHotelSupport}
-                                className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
-                              >
-                                <Plus size={28} /> Add hotel support
-                              </button>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>

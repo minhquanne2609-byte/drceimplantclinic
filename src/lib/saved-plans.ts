@@ -52,11 +52,24 @@ export async function updateSavedPlan(
   patientName: string,
   data: unknown,
 ): Promise<void> {
-  const { error } = await supabase
+  // .select() so we can tell when the update silently matched no row (e.g. a
+  // row-level-security rule) — that used to look like a successful save.
+  const { data: rows, error } = await supabase
     .from("saved_plans")
     .update({ name, patient_name: patientName, data: data as never })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  if (!rows || rows.length === 0) {
+    throw new Error("The server did not accept the save (plan not found or no permission).");
+  }
+}
+
+/** Last-updated time (ms) of a cloud plan, or null if it no longer exists. */
+export async function getSavedPlanUpdatedAt(id: string): Promise<number | null> {
+  const { data, error } = await supabase.from("saved_plans").select("updated_at").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? new Date(data.updated_at as string).getTime() : null;
 }
 
 export async function deleteSavedPlan(id: string): Promise<void> {

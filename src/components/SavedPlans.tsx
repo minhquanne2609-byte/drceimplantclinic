@@ -11,16 +11,19 @@ import {
   Check,
   Search,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import {
   createSavedPlan,
   deleteSavedPlan,
   listSavedPlans,
+  getSavedPlanUpdatedAt,
   loadSavedPlan,
   updateSavedPlan,
   type SavedPlanMeta,
 } from "@/lib/saved-plans";
 import { useZoomCounterScale } from "@/hooks/use-zoom-counter-scale";
+import { deleteDraft, listDrafts, putDraft, type Draft } from "@/lib/draft-store";
 
 // Plans are kept indefinitely (see the saved_plans_no_expiry migration), so
 // the list only ever grows. Past this many, surface a one-click "clean up"
@@ -40,18 +43,8 @@ type Props = {
   patientName: string;
 };
 
-const DRAFT_KEY = "dci-plan-autosave-v1";
-
-type Draft = { data: unknown; at: number; id: string | null; name: string };
-
-function readDraft(): Draft | null {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as Draft) : null;
-  } catch {
-    return null;
-  }
-}
+/** Marker: "the cloud copy is not known to match what is on screen". */
+const UNSAVED = "\u0000unsaved";
 
 /** Lowercase + strip diacritics so searching "an" also finds "Ẩn", "Ăn", etc. */
 function normalize(s: string): string {
@@ -85,18 +78,116 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
 
   const lastJsonRef = useRef<string>("");
   const savedJsonRef = useRef<string>("");
+  const initialJsonRef = useRef<string>("");
   const cloudTimer = useRef<number | null>(null);
+  const cloudTimerSince = useRef(0);
+  const failCount = useRef(0);
+  const inFlight = useRef(false);
+  const sessionRef = useRef<string>(`s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`);
+  const pendingDeleteRef = useRef<string | null>(null);
+  const [saveError, setSaveError] = useState("");
+  const [localOk, setLocalOk] = useState(true);
+
+  // Always-fresh copies of the values that timers / event handlers read.
+  // A timer created inside an effect keeps using whatever the render that
+  // created it saw — which previously made autosave write an OLD snapshot of
+  // the page over newer work. Everything async below reads these refs instead.
   const snapRef = useRef(getSnapshot);
   snapRef.current = getSnapshot;
-
+  const idRef = useRef(currentId);
+  idRef.current = currentId;
+  const nameRef = useRef(currentName);
+  nameRef.current = currentName;
+  const patientRef = useRef(patientName);
+  patientRef.current = patientName;
 
   /** Offer to recover local work from a previous session. */
   useEffect(() => {
-    const d = readDraft();
-    if (d && d.data) setRecover(d);
+    let alive = true;
+    void listDrafts().then((all) => {
+      const d = all.find((x) => x.session !== sessionRef.current);
+      if (alive && d) setRecover(d);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  /** Watch for changes → local autosave immediately, cloud autosave debounced. */
+  const writeDraft = async (json: string) => {
+    let data: unknown;
+    try {
+      data = JSON.parse(json);
+    } catch {
+      return;
+    }
+    const ok = await putDraft({
+      session: sessionRef.current,
+      data,
+      at: Date.now(),
+      id: idRef.current,
+      name: nameRef.current,
+    });
+    setLocalOk(ok);
+    if (ok && pendingDeleteRef.current) {
+      const old = pendingDeleteRef.current;
+      pendingDeleteRef.current = null;
+      void deleteDraft(old);
+    }
+  };
+
+  const scheduleCloud = (delay: number, keepIfOld = false) => {
+    const now = Date.now();
+    if (cloudTimer.current) {
+      // While someone types non-stop, don't keep postponing forever.
+      if (keepIfOld && now - cloudTimerSince.current > 15000) return;
+      window.clearTimeout(cloudTimer.current);
+    } else {
+      cloudTimerSince.current = now;
+    }
+    cloudTimer.current = window.setTimeout(() => {
+      cloudTimer.current = null;
+      void autoSaveCloud();
+    }, delay);
+  };
+
+  const autoSaveCloud = async () => {
+    const id = idRef.current;
+    if (!id) return;
+    if (inFlight.current) {
+      scheduleCloud(1500);
+      return;
+    }
+    inFlight.current = true;
+    setAutoSaving(true);
+    try {
+      const snapshot = snapRef.current();
+      const json = JSON.stringify(snapshot);
+      await updateSavedPlan(id, nameRef.current || patientRef.current || "Untitled plan", patientRef.current, snapshot);
+      if (idRef.current !== id) return; // user switched plans meanwhile
+      failCount.current = 0;
+      setSaveError("");
+      savedJsonRef.current = json;
+      setLastSavedAt(Date.now());
+      // Anything typed while the request was in flight is still pending.
+      let latest = json;
+      try {
+        latest = JSON.stringify(snapRef.current());
+      } catch {
+        /* ignore */
+      }
+      setDirty(latest !== json);
+    } catch (e) {
+      failCount.current += 1;
+      setSaveError(e instanceof Error ? e.message : "Could not reach the server");
+      // The on-device backup keeps the work safe; keep retrying with backoff.
+      scheduleCloud(Math.min(30000, 4000 * 2 ** failCount.current));
+    } finally {
+      inFlight.current = false;
+      setAutoSaving(false);
+    }
+  };
+
+  /** Watch for changes → local backup right away, cloud autosave debounced. */
   useEffect(() => {
     const tick = () => {
       let json = "";
@@ -107,60 +198,88 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
       }
       if (json === lastJsonRef.current) return;
       lastJsonRef.current = json;
+      if (!initialJsonRef.current) initialJsonRef.current = json;
       if (!savedJsonRef.current) savedJsonRef.current = json;
-
-      // Local backup — always, even without a cloud plan.
-      try {
-        localStorage.setItem(
-          DRAFT_KEY,
-          JSON.stringify({ data: JSON.parse(json), at: Date.now(), id: currentId, name: currentName }),
-        );
-      } catch {
-        /* storage full — ignore */
-      }
 
       const isDirty = json !== savedJsonRef.current;
       setDirty(isDirty);
 
-      if (isDirty && currentId) {
-        if (cloudTimer.current) window.clearTimeout(cloudTimer.current);
-        cloudTimer.current = window.setTimeout(() => {
-          void autoSaveCloud();
-        }, 4000);
-      }
+      // Local backup — only once the page differs from the blank starting
+      // state, so just opening the app can never overwrite an earlier backup.
+      if (json !== initialJsonRef.current) void writeDraft(json);
+
+      if (isDirty && idRef.current) scheduleCloud(4000, true);
     };
     const t = window.setInterval(tick, 1500);
     return () => {
       window.clearInterval(t);
       if (cloudTimer.current) window.clearTimeout(cloudTimer.current);
     };
-  }, [currentId, currentName]);
+  }, []);
 
-  /** Warn before leaving with unsaved cloud changes. */
+  /** Whether the page differs from what is stored in the cloud right now. */
+  const liveDirty = () => {
+    try {
+      return !!savedJsonRef.current && JSON.stringify(snapRef.current()) !== savedJsonRef.current;
+    } catch {
+      return false;
+    }
+  };
+
+  /** Push everything out as soon as the tab is hidden / being closed. */
+  useEffect(() => {
+    const flush = () => {
+      let json = "";
+      try {
+        json = JSON.stringify(snapRef.current());
+      } catch {
+        return;
+      }
+      if (initialJsonRef.current && json !== initialJsonRef.current) void writeDraft(json);
+      if (idRef.current && savedJsonRef.current && json !== savedJsonRef.current) {
+        if (cloudTimer.current) {
+          window.clearTimeout(cloudTimer.current);
+          cloudTimer.current = null;
+        }
+        void autoSaveCloud();
+      }
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  /** Warn before leaving with unsaved changes (checked live, not from a stale flag). */
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => {
-      if (!dirty) return;
+      if (!liveDirty()) return;
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", h);
     return () => window.removeEventListener("beforeunload", h);
-  }, [dirty]);
+  }, []);
 
-  const autoSaveCloud = async () => {
-    if (!currentId) return;
-    setAutoSaving(true);
-    try {
-      const snapshot = getSnapshot();
-      await updateSavedPlan(currentId, currentName || patientName || "Untitled plan", patientName, snapshot);
-      savedJsonRef.current = JSON.stringify(snapshot);
-      setDirty(false);
-      setLastSavedAt(Date.now());
-    } catch {
-      /* keep the local backup; try again on the next change */
-    } finally {
-      setAutoSaving(false);
+  /** Before replacing the page with another plan: don't silently drop edits. */
+  const confirmLeave = async (): Promise<boolean> => {
+    if (!liveDirty()) return true;
+    if (idRef.current) {
+      if (cloudTimer.current) {
+        window.clearTimeout(cloudTimer.current);
+        cloudTimer.current = null;
+      }
+      await autoSaveCloud();
+      if (!liveDirty()) return true;
     }
+    return window.confirm(
+      "The plan on this page has changes that are not saved to “Saved plans”.\n\nOpen another plan anyway? (A backup stays on this device.)",
+    );
   };
 
   const refresh = async () => {
@@ -213,6 +332,8 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
       }
       setCurrentName(name);
       savedJsonRef.current = JSON.stringify(snapshot);
+      failCount.current = 0;
+      setSaveError("");
       setDirty(false);
       setLastSavedAt(Date.now());
       setStatus(`Saved “${name}” · autosave is on`);
@@ -227,12 +348,17 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
   const open_ = async (id: string) => {
     setLoading(true);
     try {
+      if (id !== idRef.current && !(await confirmLeave())) return;
       const plan = await loadSavedPlan(id);
       restore(plan.data);
       setCurrentId(plan.id);
       setCurrentName(plan.name);
-      savedJsonRef.current = JSON.stringify(plan.data);
-      lastJsonRef.current = savedJsonRef.current;
+      // Re-baseline from the page itself on the next tick (the database
+      // re-orders JSON keys, so comparing against plan.data would look "dirty").
+      savedJsonRef.current = "";
+      lastJsonRef.current = "";
+      failCount.current = 0;
+      setSaveError("");
       setDirty(false);
       setLastSavedAt(Date.now());
       setOpen(false);
@@ -532,8 +658,20 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
             <>
               <Loader2 size={13} className="animate-spin" /> Saving…
             </>
+          ) : saveError ? (
+            <span className="flex items-center gap-1 text-destructive font-semibold" title={saveError}>
+              <AlertTriangle size={13} /> Not saved to cloud — retrying
+            </span>
           ) : dirty ? (
-            currentId ? "Unsaved changes" : "Backed up on this device"
+            !localOk ? (
+              <span className="flex items-center gap-1 text-destructive font-semibold">
+                <AlertTriangle size={13} /> Not backed up — press Save
+              </span>
+            ) : currentId ? (
+              "Unsaved changes"
+            ) : (
+              "Backed up on this device"
+            )
           ) : lastSavedAt ? (
             <>
               <Check size={13} className="text-accent" /> Saved{" "}
@@ -553,12 +691,30 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
           </p>
           <div className="mt-2 flex gap-2">
             <button
-              onClick={() => {
-                restore(recover.data);
-                if (recover.id) setCurrentId(recover.id);
-                if (recover.name) setCurrentName(recover.name);
-                lastJsonRef.current = JSON.stringify(recover.data);
+              onClick={async () => {
+                const d = recover;
+                restore(d.data);
+                let id = d.id;
+                if (id) {
+                  // Don't overwrite a cloud copy that is newer than this backup.
+                  try {
+                    const cloudAt = await getSavedPlanUpdatedAt(id);
+                    if (cloudAt === null || cloudAt > d.at + 5000) id = null;
+                  } catch {
+                    id = null;
+                  }
+                }
+                setCurrentId(id);
+                setCurrentName(d.name || "");
+                lastJsonRef.current = "";
+                savedJsonRef.current = UNSAVED;
+                pendingDeleteRef.current = d.session;
+                setDirty(true);
                 setRecover(null);
+                if (d.id && !id) {
+                  setStatus("Recovered. The saved copy in the cloud is newer, so press Save to keep this as a new plan.");
+                  setTimeout(() => setStatus(""), 8000);
+                }
               }}
               className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-semibold"
             >
@@ -566,7 +722,7 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
             </button>
             <button
               onClick={() => {
-                localStorage.removeItem(DRAFT_KEY);
+                void deleteDraft(recover.session);
                 setRecover(null);
               }}
               className="px-3 py-1 rounded-full border border-border text-xs font-semibold"
