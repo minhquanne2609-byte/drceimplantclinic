@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageUp, Loader2, X, AlertTriangle, Check } from "lucide-react";
-import { readPlanFromImage, type ImportedPlan } from "@/lib/plan-ocr";
+import { fileToBase64Jpeg, readPlanFromImage, type ImportedPlan } from "@/lib/plan-ocr";
+import { extractPlanWithGemini } from "@/lib/plan-import";
 
 export type ReviewedRow = {
   key: string;
@@ -24,6 +25,7 @@ type Props = {
   onApply: (result: ImportResult) => void;
 };
 
+const CODE_KEY = "dci-import-code";
 let seq = 0;
 const k = () => `i${++seq}`;
 
@@ -34,6 +36,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState("");
+  const [notice, setNotice] = useState("");
   const [patientName, setPatientName] = useState("");
   const [applyName, setApplyName] = useState(true);
   const [phases, setPhases] = useState<ReviewedPhase[] | null>(null);
@@ -46,6 +49,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
     setPreview(null);
     setFile(null);
     setProgress("");
+    setNotice("");
     setPatientName("");
     setApplyName(true);
     setPhases(null);
@@ -110,14 +114,51 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
     );
   };
 
-  const read = async () => {
+  const read = async (codeOverride?: string) => {
     if (!file) return;
     setBusy(true);
     setError("");
-    setProgress("Starting…");
+    setNotice("");
     try {
-      const plan = await readPlanFromImage(file, catalogNames, setProgress);
-      if (!plan.patientName && plan.phases.length === 0) {
+      let plan: ImportedPlan | null = null;
+      // 1) AI reader (server) — accurate. 2) Fallback: basic in-browser reader.
+      try {
+        setProgress("Reading the image…");
+        const imageBase64 = await fileToBase64Jpeg(file);
+        let accessCode = codeOverride;
+        if (accessCode === undefined) {
+          try {
+            accessCode = localStorage.getItem(CODE_KEY) ?? "";
+          } catch {
+            accessCode = "";
+          }
+        }
+        plan = await extractPlanWithGemini({ data: { imageBase64, catalogNames, accessCode } });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        if (msg.includes("ACCESS_CODE_REQUIRED")) {
+          const entered = window.prompt("Enter the import access code:");
+          if (entered) {
+            try {
+              localStorage.setItem(CODE_KEY, entered);
+            } catch {
+              /* ignore */
+            }
+            return await read(entered);
+          }
+          throw new Error("An access code is required for this feature.");
+        }
+        if (msg.includes("Image is too large")) throw e;
+        setNotice(
+          msg.includes("AI_NOT_CONFIGURED")
+            ? "AI reader is not set up on the server, so the basic reader was used — please double-check the result."
+            : msg.includes("AI_RATE_LIMITED")
+              ? "The free AI limit was reached for now, so the basic reader was used — please double-check the result."
+              : "The AI reader was unavailable, so the basic reader was used — please double-check the result.",
+        );
+        plan = await readPlanFromImage(file, catalogNames, setProgress);
+      }
+      if (!plan || (!plan.patientName && plan.phases.length === 0)) {
         setError("Nothing recognisable was found. Try a sharper, larger or straighter image (a screenshot works best).");
       } else {
         toReview(plan);
@@ -178,7 +219,7 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
               <div>
                 <h2 className="font-bold text-primary text-lg">Import treatment plan from a photo</h2>
                 <p className="text-xs text-muted-foreground">
-                  Upload (or paste with Ctrl+V) a photo or screenshot. It is read on this computer — nothing is uploaded. Check and fix everything before adding.
+                  Upload (or paste with Ctrl+V) a photo or screenshot. The image is read by AI; always check the result before adding.
                 </p>
               </div>
               <button onClick={close} className="p-1.5 rounded-full hover:bg-muted" aria-label="Close">
@@ -232,6 +273,10 @@ export function PlanImportButton({ catalogNames, onApply }: Props) {
               )}
 
               {busy && progress && <p className="text-sm text-muted-foreground text-center">{progress}</p>}
+
+              {notice && (
+                <div className="rounded-lg bg-amber-50 text-amber-800 px-3 py-2 text-sm">{notice}</div>
+              )}
 
               {error && (
                 <div className="flex items-start gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2 text-sm">

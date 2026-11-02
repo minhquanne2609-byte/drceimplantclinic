@@ -535,6 +535,7 @@ type Phase = {
   title: string;
   rows: Row[];
   note?: string; // editable note shown between this phase and the next
+  hotelSupportVnd?: number; // accommodation support deducted from this phase's total (shown above the Total row)
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -3066,9 +3067,13 @@ function PlanPage({ content }: { content: ContentMap }) {
 
   const removePhase = (id: string) => setPhases((p) => p.filter((ph) => ph.id !== id));
 
+  // A phase's payable total = its rows minus any hotel support, never below 0.
+  const phaseNetVnd = (ph: Phase) =>
+    Math.max(0, ph.rows.reduce((s, r) => s + rowVnd(r), 0) - (Number(ph.hotelSupportVnd) || 0));
+
   const grandTotals = useMemo(() => {
     let vnd = 0;
-    for (const ph of phases) for (const r of ph.rows) vnd += rowVnd(r);
+    for (const ph of phases) vnd += phaseNetVnd(ph);
     return { vnd };
   }, [phases]);
   const grandFx = (col: Col) => grandTotals.vnd * (rates[col.currency ?? "AUD"] ?? 0);
@@ -3079,7 +3084,7 @@ function PlanPage({ content }: { content: ContentMap }) {
   const scopedVnd = useMemo(() => {
     if (printScope === "all") return grandTotals.vnd;
     const ph = phases[Number(printScope)];
-    return ph ? ph.rows.reduce((s, r) => s + rowVnd(r), 0) : 0;
+    return ph ? phaseNetVnd(ph) : 0;
   }, [printScope, phases, grandTotals.vnd]);
   const scopedFx = (col: Col) => scopedVnd * (rates[col.currency ?? "AUD"] ?? 0);
 
@@ -5690,7 +5695,8 @@ function PlanPage({ content }: { content: ContentMap }) {
 
           <div className="space-y-5">
             {phases.map((phase, pi) => {
-              const phaseVnd = phase.rows.reduce((s, r) => s + rowVnd(r), 0);
+              const phaseVnd = phaseNetVnd(phase);
+              const hotelVnd = Number(phase.hotelSupportVnd) || 0;
               return (
                 <div
                   key={phase.id}
@@ -6118,6 +6124,48 @@ function PlanPage({ content }: { content: ContentMap }) {
                                 })}
                               </tbody>
                               <tfoot>
+                                {phase.hotelSupportVnd !== undefined && (
+                                  <tr className="bg-secondary/60 font-semibold text-foreground text-[2.25rem]">
+                                    <td className="py-3 px-3 print:hidden border-0" />
+                                    <td className="py-2.5 px-3 text-center" colSpan={6}>
+                                      Hotel support (deducted from your bill)
+                                    </td>
+                                    {cols.map((col) => (
+                                      <td key={col.id} className="py-3 px-3 text-center">
+                                        {col.kind === "vnd" && (
+                                          <>
+                                            <span className="print:hidden inline-flex items-center justify-center gap-1">
+                                              −
+                                              <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={hotelVnd ? fmtInt(hotelVnd) : ""}
+                                                placeholder="0"
+                                                onChange={(e) =>
+                                                  updatePhase(phase.id, {
+                                                    hotelSupportVnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
+                                                  })
+                                                }
+                                                className="w-44 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary"
+                                              />
+                                            </span>
+                                            <span className="hidden print:inline">−{fmtInt(hotelVnd)}</span>
+                                          </>
+                                        )}
+                                        {col.kind === "fx" && `−${fmtNum(hotelVnd * (rates[col.currency ?? "AUD"] ?? 0))}`}
+                                      </td>
+                                    ))}
+                                    <td className="py-3 px-3 text-right print:hidden border-0">
+                                      <button
+                                        onClick={() => updatePhase(phase.id, { hotelSupportVnd: undefined })}
+                                        className="p-1.5 rounded-full hover:bg-destructive/10 text-destructive"
+                                        aria-label="Remove hotel support"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )}
                                 <tr className="bg-secondary font-bold text-foreground text-[3rem]">
                                   <td className="py-3 px-3 print:hidden border-0" />
                                   <td className="py-2.5 px-3 text-center" colSpan={6}>
@@ -6137,12 +6185,22 @@ function PlanPage({ content }: { content: ContentMap }) {
                           </div>
 
                           <div className="flex items-center justify-between mt-4 px-4 pb-4 print:hidden">
+                            <div className="flex items-center gap-8">
                             <button
                               onClick={() => addRow(phase.id)}
                               className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
                             >
                               <Plus size={28} /> Add treatment row
                             </button>
+                            {phase.hotelSupportVnd === undefined && (
+                              <button
+                                onClick={() => updatePhase(phase.id, { hotelSupportVnd: 10_000_000 })}
+                                className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
+                              >
+                                <Plus size={28} /> Add hotel support
+                              </button>
+                            )}
+                            </div>
                             <div className="text-[1.5rem] text-muted-foreground bg-muted px-3 py-1 rounded-full">
                               Tip: Qty follows the tooth numbers · foreign amounts use live rates · every cell can be
                               overridden

@@ -212,3 +212,21 @@ export async function readPlanFromImage(
   const text = await ocrImageText(file, onProgress);
   return parsePlanText(text, catalogNames);
 }
+
+/** Downscale + re-encode as JPEG (phone photos are huge) → raw base64 for upload. */
+export async function fileToBase64Jpeg(file: Blob, maxSide = 1800): Promise<string> {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("Could not process the image.");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close?.();
+  return c.toDataURL("image/jpeg", 0.88).split(",")[1] ?? "";
+}

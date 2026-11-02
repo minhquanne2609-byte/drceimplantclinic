@@ -1,30 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-
-export type ImportedRow = {
-  /** Service name exactly as written on the image. */
-  name: string;
-  /** Exact catalog name when the model is confident of a match, else null. */
-  catalogName: string | null;
-  tooth: string;
-  qty: number;
-  /** Unit price (VND) if the image shows one; null when absent / "included". */
-  unitPriceVnd: number | null;
-};
-
-export type ImportedPhase = { title: string | null; rows: ImportedRow[] };
-
-export type ImportedPlan = {
-  patientName: string | null;
-  dob: string | null;
-  patientId: string | null;
-  treatingDoctor: string | null;
-  phases: ImportedPhase[];
-};
+import type { ImportedPlan, ImportedPhase, ImportedRow } from "@/lib/plan-ocr";
 
 export type ExtractInput = {
-  /** Raw base64 (no data: prefix). */
+  /** Raw base64 JPEG (no data: prefix). */
   imageBase64: string;
-  mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
   /** Names from the clinic's service catalog, so the model can snap to them. */
   catalogNames: string[];
   /** Only checked when the PLAN_IMPORT_CODE env var is set. */
@@ -32,116 +11,98 @@ export type ExtractInput = {
 };
 
 const MAX_BASE64_CHARS = 7_000_000; // ≈5 MB image
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
-const TOOL = {
-  name: "record_treatment_plan",
-  description: "Record the patient name and the treatment plan lines read from the image.",
-  input_schema: {
-    type: "object",
-    properties: {
-      patientName: { type: ["string", "null"], description: "Patient / customer full name, or null if not visible." },
-      dob: { type: ["string", "null"] },
-      patientId: { type: ["string", "null"] },
-      treatingDoctor: { type: ["string", "null"] },
-      phases: {
-        type: "array",
-        description: "Treatment phases/stages in the order shown. Use one phase if the image has no phase headings.",
-        items: {
-          type: "object",
-          properties: {
-            title: { type: ["string", "null"], description: "Phase heading as written, e.g. 'Phase 1 — Implant Placement (14 days)'." },
-            rows: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string", description: "Service name as written on the image." },
-                  catalogName: {
-                    type: ["string", "null"],
-                    description: "The EXACT matching name from the provided catalog list, or null if no confident match.",
-                  },
-                  tooth: { type: "string", description: "Tooth numbers / jaw as written (e.g. '16, 17' or 'Upper jaw'); empty string if none." },
-                  qty: { type: "number", description: "Quantity; 1 if not shown." },
-                  unitPriceVnd: { type: ["number", "null"], description: "Unit price in VND if shown, else null." },
-                },
-                required: ["name", "catalogName", "tooth", "qty", "unitPriceVnd"],
+const SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    patientName: { type: "STRING", nullable: true },
+    phases: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING", nullable: true },
+          rows: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                name: { type: "STRING" },
+                catalogName: { type: "STRING", nullable: true },
+                tooth: { type: "STRING" },
+                qty: { type: "NUMBER" },
+                unitPriceVnd: { type: "NUMBER", nullable: true },
               },
+              required: ["name", "catalogName", "tooth", "qty", "unitPriceVnd"],
             },
           },
-          required: ["title", "rows"],
         },
+        required: ["title", "rows"],
       },
     },
-    required: ["patientName", "dob", "patientId", "treatingDoctor", "phases"],
   },
-} as const;
+  required: ["patientName", "phases"],
+};
 
-export const extractPlanFromImage = createServerFn({ method: "POST" })
+export const extractPlanWithGemini = createServerFn({ method: "POST" })
   .inputValidator((d: ExtractInput) => d)
   .handler(async ({ data }): Promise<ImportedPlan> => {
     const required = process.env["PLAN_IMPORT_CODE"];
-    if (required && data.accessCode !== required) {
-      throw new Error("ACCESS_CODE_REQUIRED");
-    }
-    const apiKey = process.env["ANTHROPIC_API_KEY"];
-    if (!apiKey) {
-      throw new Error("The server has no ANTHROPIC_API_KEY set (add it in Vercel → Settings → Environment Variables, then redeploy).");
-    }
-    if (!ALLOWED.has(data.mediaType)) throw new Error("Unsupported image type.");
+    if (required && data.accessCode !== required) throw new Error("ACCESS_CODE_REQUIRED");
+
+    const apiKey = process.env["GEMINI_API_KEY"];
+    if (!apiKey) throw new Error("AI_NOT_CONFIGURED");
+
     if (!data.imageBase64 || data.imageBase64.length > MAX_BASE64_CHARS) {
       throw new Error("Image is too large — try a smaller screenshot or photo.");
     }
 
     const names = (data.catalogNames ?? []).slice(0, 800);
     const prompt = [
-      "This image is a dental implant treatment plan / quotation (it may be a phone photo, a screenshot, or a scan; text may be Vietnamese or English).",
-      "Read it and call record_treatment_plan.",
+      "This image is a dental implant treatment plan / quotation (phone photo, screenshot or scan; English or Vietnamese).",
+      "Extract it as JSON matching the schema.",
       "Rules:",
-      "- Copy only what is visible. Never invent services, teeth, quantities or prices. Use null / empty string when something is not shown.",
-      "- patientName: the patient/customer name (often near the top, next to 'Patient', 'Khách hàng', 'Họ tên', 'Dear …'). Keep Vietnamese diacritics.",
-      "- Keep the phases in the order shown. If there are no phase headings, return a single phase.",
-      "- One row per service line. Tooth numbers in FDI notation as written.",
-      "- If a line shows a price per unit, give it in VND as a plain number (e.g. 'VND 12,000,000' → 12000000). Totals and currency conversions (AUD/USD…) are NOT unit prices.",
-      "- catalogName: choose from this list ONLY when the line clearly is that service (wording may differ slightly or be in Vietnamese); otherwise null.",
+      "- Copy only what is visible. Never invent services, teeth, quantities or prices. Use null / empty string when not shown.",
+      "- patientName: the patient/customer full name (near the top, e.g. next to 'Patient', 'Dear', or in the title). Keep diacritics.",
+      "- Keep the phases in the order shown (title as written, e.g. 'Phase 1 — Implant Placement (14 days)'). If there are no phase headings, return one phase with title null.",
+      "- One row per service line, skipping header rows, subtotals and totals. Tooth numbers as written (FDI), or 'Upper jaw' / 'Lower jaw'.",
+      "- unitPriceVnd: unit price in VND as a plain number if shown (e.g. 12,000,000 → 12000000); null if absent or 'In package'. Totals and AUD/USD amounts are NOT unit prices.",
+      "- catalogName: the EXACT name from the catalog list below when the line clearly is that service (wording may differ slightly); otherwise null.",
       "",
       "Catalog:",
       names.map((n) => `- ${n}`).join("\n"),
     ].join("\n");
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const model = process.env["GEMINI_MODEL"] || "gemini-2.5-flash";
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        model: process.env["ANTHROPIC_MODEL"] || "claude-sonnet-4-6",
-        max_tokens: 4096,
-        tools: [TOOL],
-        tool_choice: { type: "tool", name: TOOL.name },
-        messages: [
+        contents: [
           {
             role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: data.mediaType, data: data.imageBase64 } },
-              { type: "text", text: prompt },
-            ],
+            parts: [{ inline_data: { mime_type: "image/jpeg", data: data.imageBase64 } }, { text: prompt }],
           },
         ],
+        generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0 },
       }),
     });
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      console.error("[plan-import] Anthropic error", res.status, body.slice(0, 500));
-      throw new Error(`Could not read the image (AI service error ${res.status}).`);
+      console.error("[plan-import] Gemini error", res.status, body.slice(0, 500));
+      if (res.status === 429) throw new Error("AI_RATE_LIMITED");
+      throw new Error(`AI_ERROR_${res.status}`);
     }
-    const json = (await res.json()) as { content?: { type: string; input?: unknown }[] };
-    const block = json.content?.find((c) => c.type === "tool_use");
-    if (!block?.input) throw new Error("The AI returned nothing readable. Try a clearer image.");
-    return normalizePlan(block.input);
+    const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error("AI_BAD_RESPONSE");
+    }
+    return normalizePlan(parsed);
   });
 
 function str(v: unknown): string | null {
@@ -170,11 +131,5 @@ function normalizePlan(input: unknown): ImportedPlan {
       .filter((r) => r.name);
     return { title: str(po["title"]), rows };
   });
-  return {
-    patientName: str(o["patientName"]),
-    dob: str(o["dob"]),
-    patientId: str(o["patientId"]),
-    treatingDoctor: str(o["treatingDoctor"]),
-    phases: phases.filter((p) => p.rows.length > 0),
-  };
+  return { patientName: str(o["patientName"]), phases: phases.filter((p) => p.rows.length > 0) };
 }
