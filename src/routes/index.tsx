@@ -530,12 +530,14 @@ type Col = {
   kind: "vnd" | "fx" | "custom";
   currency?: string; // for kind === "fx"
 };
+type Deduction = { id: string; label: string; vnd: number };
+
 type Phase = {
   id: string;
   title: string;
   rows: Row[];
   note?: string; // editable note shown between this phase and the next
-  hotelSupportVnd?: number; // accommodation support deducted from this phase's total (shown above the Total row)
+  deductions?: Deduction[]; // amounts subtracted from this phase's total (e.g. HOTEL SUPPORT), shown above the Total row
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -3069,7 +3071,41 @@ function PlanPage({ content }: { content: ContentMap }) {
 
   // A phase's payable total = its rows minus any hotel support, never below 0.
   const phaseNetVnd = (ph: Phase) =>
-    Math.max(0, ph.rows.reduce((s, r) => s + rowVnd(r), 0) - (Number(ph.hotelSupportVnd) || 0));
+    Math.max(
+      0,
+      ph.rows.reduce((s, r) => s + rowVnd(r), 0) - (ph.deductions ?? []).reduce((s, d) => s + (Number(d.vnd) || 0), 0),
+    );
+
+  const updateDeduction = (phaseId: string, id: string, patch: Partial<Deduction>) =>
+    setPhases((p) =>
+      p.map((ph) =>
+        ph.id === phaseId
+          ? { ...ph, deductions: (ph.deductions ?? []).map((d) => (d.id === id ? { ...d, ...patch } : d)) }
+          : ph,
+      ),
+    );
+  const addDeduction = (phaseId: string) =>
+    setPhases((p) =>
+      p.map((ph) => {
+        if (ph.id !== phaseId) return ph;
+        const list = ph.deductions ?? [];
+        return {
+          ...ph,
+          deductions: [
+            ...list,
+            { id: uid(), label: "HOTEL SUPPORT", vnd: 10_000_000 },
+          ],
+        };
+      }),
+    );
+  const removeDeduction = (phaseId: string, id: string) =>
+    setPhases((p) =>
+      p.map((ph) => {
+        if (ph.id !== phaseId) return ph;
+        const left = (ph.deductions ?? []).filter((d) => d.id !== id);
+        return { ...ph, deductions: left.length ? left : undefined };
+      }),
+    );
 
   const grandTotals = useMemo(() => {
     let vnd = 0;
@@ -4382,7 +4418,17 @@ function PlanPage({ content }: { content: ContentMap }) {
     setLogoImg(s.logoImg);
     setGallery(s.gallery);
     setCols(s.cols);
-    setPhases(s.phases);
+    // Older saves used a single hotelSupportVnd number — convert it to a deduction line.
+    setPhases(
+      s.phases.map((ph: Phase & { hotelSupportVnd?: number }) => {
+        if (ph.hotelSupportVnd === undefined) return ph;
+        const { hotelSupportVnd, ...rest } = ph;
+        return {
+          ...rest,
+          deductions: [...(rest.deductions ?? []), { id: uid(), label: "HOTEL SUPPORT", vnd: Number(hotelSupportVnd) || 0 }],
+        };
+      }),
+    );
   };
   const { undo, redo, clearHistory, canUndo, canRedo } = useUndoRedo(undoSnapshot, restoreSnapshot);
 
@@ -5696,7 +5742,6 @@ function PlanPage({ content }: { content: ContentMap }) {
           <div className="space-y-5">
             {phases.map((phase, pi) => {
               const phaseVnd = phaseNetVnd(phase);
-              const hotelVnd = Number(phase.hotelSupportVnd) || 0;
               return (
                 <div
                   key={phase.id}
@@ -6124,11 +6169,17 @@ function PlanPage({ content }: { content: ContentMap }) {
                                 })}
                               </tbody>
                               <tfoot>
-                                {phase.hotelSupportVnd !== undefined && (
-                                  <tr className="bg-secondary/60 font-semibold text-foreground text-[2.25rem]">
+                                {(phase.deductions ?? []).map((d) => (
+                                  <tr key={d.id} className="bg-secondary/60 font-semibold text-foreground text-[2.25rem]">
                                     <td className="py-3 px-3 print:hidden border-0" />
                                     <td className="py-2.5 px-3 text-center" colSpan={6}>
-                                      Hotel support (deducted from your bill)
+                                      <input
+                                        type="text"
+                                        value={d.label}
+                                        onChange={(e) => updateDeduction(phase.id, d.id, { label: e.target.value.toUpperCase() })}
+                                        className="uppercase w-full text-center bg-transparent outline-none border-b border-dotted border-transparent hover:border-border focus:border-primary print:hidden"
+                                      />
+                                      <span className="hidden print:block uppercase">{d.label}</span>
                                     </td>
                                     {cols.map((col) => (
                                       <td key={col.id} className="py-3 px-3 text-center">
@@ -6139,33 +6190,33 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               <input
                                                 type="text"
                                                 inputMode="numeric"
-                                                value={hotelVnd ? fmtInt(hotelVnd) : ""}
+                                                value={d.vnd ? fmtInt(d.vnd) : ""}
                                                 placeholder="0"
                                                 onChange={(e) =>
-                                                  updatePhase(phase.id, {
-                                                    hotelSupportVnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
+                                                  updateDeduction(phase.id, d.id, {
+                                                    vnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
                                                   })
                                                 }
                                                 className="w-44 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary"
                                               />
                                             </span>
-                                            <span className="hidden print:inline">−{fmtInt(hotelVnd)}</span>
+                                            <span className="hidden print:inline">−{fmtInt(d.vnd)}</span>
                                           </>
                                         )}
-                                        {col.kind === "fx" && `−${fmtNum(hotelVnd * (rates[col.currency ?? "AUD"] ?? 0))}`}
+                                        {col.kind === "fx" && `−${fmtNum(d.vnd * (rates[col.currency ?? "AUD"] ?? 0))}`}
                                       </td>
                                     ))}
                                     <td className="py-3 px-3 text-right print:hidden border-0">
                                       <button
-                                        onClick={() => updatePhase(phase.id, { hotelSupportVnd: undefined })}
+                                        onClick={() => removeDeduction(phase.id, d.id)}
                                         className="p-1.5 rounded-full hover:bg-destructive/10 text-destructive"
-                                        aria-label="Remove hotel support"
+                                        aria-label="Remove deduction"
                                       >
                                         <Trash2 size={14} />
                                       </button>
                                     </td>
                                   </tr>
-                                )}
+                                ))}
                                 <tr className="bg-secondary font-bold text-foreground text-[3rem]">
                                   <td className="py-3 px-3 print:hidden border-0" />
                                   <td className="py-2.5 px-3 text-center" colSpan={6}>
@@ -6192,14 +6243,12 @@ function PlanPage({ content }: { content: ContentMap }) {
                             >
                               <Plus size={28} /> Add treatment row
                             </button>
-                            {phase.hotelSupportVnd === undefined && (
-                              <button
-                                onClick={() => updatePhase(phase.id, { hotelSupportVnd: 10_000_000 })}
-                                className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
-                              >
-                                <Plus size={28} /> Add hotel support
-                              </button>
-                            )}
+                            <button
+                              onClick={() => addDeduction(phase.id)}
+                              className="inline-flex items-center gap-2 text-[2rem] text-primary hover:text-primary/80 font-bold"
+                            >
+                              <Plus size={28} /> Add hotel support
+                            </button>
                             </div>
                             <div className="text-[1.5rem] text-muted-foreground bg-muted px-3 py-1 rounded-full">
                               Tip: Qty follows the tooth numbers · foreign amounts use live rates · every cell can be
