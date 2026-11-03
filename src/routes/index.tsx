@@ -1581,13 +1581,6 @@ function BeforeAfterCard({
               onPickLibrary={onPickLibrary ? () => onPickLibrary("before") : undefined}
             />
           )}
-          <span className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-foreground/80 text-background text-[1.25rem] font-bold">
-            <Editable
-              value={item.beforeLabel}
-              onChange={(v) => onChange({ beforeLabel: v })}
-              className="text-background"
-            />
-          </span>
         </div>
         <div className="relative h-full overflow-hidden flex-1">
           {item.after ? (
@@ -1615,13 +1608,6 @@ function BeforeAfterCard({
               onPickLibrary={onPickLibrary ? () => onPickLibrary("after") : undefined}
             />
           )}
-          <span className="absolute top-3 right-3 px-3 py-1 rounded-lg bg-foreground/80 text-background text-[1.25rem] font-bold">
-            <Editable
-              value={item.afterLabel}
-              onChange={(v) => onChange({ afterLabel: v })}
-              className="text-background"
-            />
-          </span>
         </div>
 
         {/* Divider handle */}
@@ -2194,6 +2180,9 @@ function PlanPage({ content }: { content: ContentMap }) {
    * as they change, so an owner sees exactly what they saved without a reload.
    * Patient-specific data is never touched.
    */
+  // Set once a saved plan (or a recovered backup) is loaded: its special offer must
+  // stay exactly as saved, so published Content changes never overwrite it.
+  const offersLockedRef = useRef(false);
   const contentKeyRef = useRef(JSON.stringify(content));
   useEffect(() => {
     const key = JSON.stringify(content);
@@ -2205,9 +2194,11 @@ function PlanPage({ content }: { content: ContentMap }) {
     setFormHeading(content.patient_information.title);
     setHistoryHeading(content.patient_information.items[0]?.title ?? "MEDICAL HISTORY");
     setAllergyHeading(content.patient_information.items[1]?.title ?? "MEDICATION ALLERGY");
-    setOffersHeading(content.patient_benefits.title);
-    setOfferIntro(content.patient_benefits.body);
-    setOffers(content.patient_benefits.items.map((it, i) => ({ id: `o${i + 1}`, ...it })));
+    if (!offersLockedRef.current) {
+      setOffersHeading(content.patient_benefits.title);
+      setOfferIntro(content.patient_benefits.body);
+      setOffers(content.patient_benefits.items.map((it, i) => ({ id: `o${i + 1}`, ...it })));
+    }
     setDxHeading(content.diagnosis_introduction.title);
     setDxSummary(content.diagnosis_introduction.body);
     setTreatmentPlanHeading(content.treatment_plan_introduction.title);
@@ -4440,9 +4431,15 @@ function PlanPage({ content }: { content: ContentMap }) {
   // restoreSnapshot directly and is unaffected.
   const restoreSavedPlan = (s: any) => {
     restoreSnapshot(s);
-    setOffersHeading(content.patient_benefits.title);
-    setOfferIntro(content.patient_benefits.body);
-    setOffers(content.patient_benefits.items.map((it, i) => ({ id: `o${i + 1}`, ...it })));
+    // A saved plan keeps its special offer exactly as it was saved — never
+    // swapped for the clinic's current defaults. Only very old saves that
+    // stored no offer fall back to the current Content.
+    offersLockedRef.current = true;
+    if (s.offersHeading === undefined) setOffersHeading(content.patient_benefits.title);
+    if (s.offerIntro === undefined) setOfferIntro(content.patient_benefits.body);
+    if (!Array.isArray(s.offers)) {
+      setOffers(content.patient_benefits.items.map((it, i) => ({ id: `o${i + 1}`, ...it })));
+    }
   };
 
   // Fill the plan from a photo/screenshot (see PlanImportDialog). Rows are plain
