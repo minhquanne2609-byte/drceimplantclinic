@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ALL_CURRENCY_CODES } from "@/lib/currencies";
 
 /** Live FX rates expressed as: 1 VND = rates[CODE] units of CODE. */
 export type Rates = Record<string, number>;
@@ -54,4 +55,4 @@ export function useLiveRates(refreshMs = 5 * 60 * 1000) {
   return { rates, updatedAt, loading, refresh: load };
 }
 
-export const CURRENCY_CODES = Object.keys(FALLBACK);
+export const CURRENCY_CODES = Array.from(new Set([...Object.keys(FALLBACK), ...ALL_CURRENCY_CODES]));

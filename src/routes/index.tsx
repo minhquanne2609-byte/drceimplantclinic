@@ -147,6 +147,7 @@ import {
 import { useLiveRates, CURRENCY_CODES } from "@/lib/currency";
 import { SavedPlansBar } from "@/components/SavedPlans";
 import { PlanImportButton, type ImportResult } from "@/components/PlanImportDialog";
+import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { PatientJourneyNav } from "@/components/PatientJourneyNav";
 import { SectionHeading } from "@/components/SectionHeading";
 import { PhotoCollage } from "@/components/PhotoCollage";
@@ -2320,8 +2321,6 @@ function PlanPage({ content }: { content: ContentMap }) {
   // so this panel stays readable instead of shrinking to illegible size when
   // the whole page is zoomed way out to see the full treatment plan at once.
   const converterZoomScale = useZoomCounterScale(converterOpen);
-  // VND always listed first regardless of the live-rates API's own key order.
-  const converterCurrencyCodes = ["VND", ...knownCurrencyCodes.filter((c) => c !== "VND")];
   const [converterAmount, setConverterAmount] = useState("5000000");
   const [converterFrom, setConverterFrom] = useState("VND");
   const [converterTo, setConverterTo] = useState("USD");
@@ -4584,8 +4583,8 @@ function PlanPage({ content }: { content: ContentMap }) {
         <div className="h-1.5 w-full bg-gradient-to-r from-primary via-accent to-primary no-print" />
 
         {/* Sticky toolbar */}
-        <div className="no-print sticky top-0 z-30 backdrop-blur-xl bg-card/90 border-b border-border shadow-sm print:hidden">
-          <div className="max-w-[2000px] mx-auto flex flex-wrap items-center gap-4 px-5 py-4">
+        <div className="no-print sticky top-0 z-30 backdrop-blur-xl bg-card/95 border-b border-border shadow-md print:hidden">
+          <div className="max-w-[2000px] mx-auto flex flex-wrap items-center gap-4 px-5 pt-4 pb-7">
             <div className="flex items-center gap-3">
               <EditableImage
                 src={logoImg}
@@ -5667,17 +5666,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                         className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
                         placeholder="Amount"
                       />
-                      <select
-                        value={converterFrom}
-                        onChange={(e) => setConverterFrom(e.target.value)}
-                        className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                      >
-                        {converterCurrencyCodes.map((code) => (
-                          <option key={code} value={code}>
-                            {code}
-                          </option>
-                        ))}
-                      </select>
+                      <CurrencyPicker value={converterFrom} onChange={setConverterFrom} rates={rates} variant="field" title="From currency" />
                     </div>
 
                     <div className="flex items-center justify-center">
@@ -5696,17 +5685,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                       <div className="w-full rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm font-semibold">
                         {converterResult === null ? "—" : fmtNum(converterResult, converterTo === "VND" ? 0 : 2)}
                       </div>
-                      <select
-                        value={converterTo}
-                        onChange={(e) => setConverterTo(e.target.value)}
-                        className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                      >
-                        {converterCurrencyCodes.map((code) => (
-                          <option key={code} value={code}>
-                            {code}
-                          </option>
-                        ))}
-                      </select>
+                      <CurrencyPicker value={converterTo} onChange={setConverterTo} rates={rates} variant="field" title="To currency" />
                     </div>
 
                     <div className="text-xs text-muted-foreground">
@@ -5893,23 +5872,11 @@ function PlanPage({ content }: { content: ContentMap }) {
                                         {col.kind === "fx" ? (
                                           <>
                                             <span className="print:inline hidden font-bold">{col.label}</span>
-                                            <select
+                                            <CurrencyPicker
                                               value={col.currency ?? "AUD"}
-                                              onChange={(e) => setColCurrency(col.id, e.target.value)}
-                                              className="print:hidden bg-transparent outline-none font-bold text-inherit cursor-pointer [&>option]:text-foreground"
-                                              title="Change currency"
-                                            >
-                                              {Array.from(
-                                                new Set([
-                                                  ...CURRENCY_CODES,
-                                                  ...(col.currency ? [col.currency] : []),
-                                                ]),
-                                              ).map((c) => (
-                                                <option key={c} value={c}>
-                                                  {c}
-                                                </option>
-                                              ))}
-                                            </select>
+                                              onChange={(c) => setColCurrency(col.id, c)}
+                                              rates={rates}
+                                            />
                                           </>
                                         ) : (
                                           <Editable
