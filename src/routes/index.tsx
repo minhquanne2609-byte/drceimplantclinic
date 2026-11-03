@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RichEditable } from "@/components/RichTextEditor";
 import { RichText } from "@/components/RichText";
 import { toPlain, stripLeadingNumber, isEmptyRich } from "@/lib/rich-text";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -1219,8 +1219,69 @@ function Watermark({ src, alt = "" }: { src: string; alt?: string }) {
       <img
         src={src}
         alt={alt}
-        className="w-[85%] object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
+        className="w-[85%] h-[85%] object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
       />
+    </div>
+  );
+}
+
+/**
+ * Logo watermark confined to the table's ROW area (between the dark column header and
+ * the Total row). It is sized to that area with object-fit: contain, so the whole logo
+ * and its lettering are always visible — nothing hides behind the header/total bands and
+ * nothing is cropped, whether the phase has 3 rows or 30.
+ */
+function TableBodyWatermark({ src, wrapRef }: { src: string; wrapRef: React.RefObject<HTMLDivElement | null> }) {
+  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    const table = wrap?.querySelector("table") as HTMLTableElement | null;
+    if (!wrap || !table) return;
+    const measure = () => {
+      const body = table.tBodies[0];
+      if (!body) return;
+      const next = {
+        top: table.offsetTop + body.offsetTop,
+        left: table.offsetLeft + body.offsetLeft,
+        width: body.offsetWidth,
+        height: body.offsetHeight,
+      };
+      setBox((prev) =>
+        prev && prev.top === next.top && prev.left === next.left && prev.width === next.width && prev.height === next.height
+          ? prev
+          : next,
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(table);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [src, wrapRef]);
+
+  if (!src || !box || box.height < 8) return null;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute z-0 flex items-center justify-center overflow-hidden"
+      style={{ top: box.top, left: box.left, width: box.width, height: box.height }}
+    >
+      <img
+        src={src}
+        alt=""
+        style={{ width: "88%", height: "88%" }}
+        className="object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
+      />
+    </div>
+  );
+}
+
+function PlanTableFrame({ logo, children }: { logo?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  return (
+    <div ref={ref} className="relative">
+      {logo ? <TableBodyWatermark src={logo} wrapRef={ref} /> : null}
+      {children}
     </div>
   );
 }
@@ -5728,7 +5789,6 @@ function PlanPage({ content }: { content: ContentMap }) {
                     data-plan-phase-card
                     className="relative rounded-[1.5rem] border border-border bg-card overflow-hidden shadow-lg shadow-primary/5 avoid-break"
                   >
-                    {pi === 0 && <Watermark src={logoImg} alt="" />}
                     <div className="relative z-10">
                       <div className="flex items-center gap-4 px-6 py-5 bg-primary text-white rounded-t-[1.5rem]">
                         {(() => {
@@ -5807,7 +5867,8 @@ function PlanPage({ content }: { content: ContentMap }) {
                       {isOpen(phase.id) && (
                         <div>
                           <div className="overflow-x-auto print:overflow-visible rounded-[1.5rem]">
-                            <table className="plan-table w-full text-[2.25rem] print:text-[11px] print:table-fixed">
+                            <PlanTableFrame logo={pi === 0 ? logoImg : undefined}>
+                            <table className="plan-table relative z-10 w-full text-[2.25rem] print:text-[11px] print:table-fixed">
                               <thead>
                                 <tr className="text-left bg-primary text-primary-foreground text-[2.25rem] uppercase tracking-wide">
                                   <th className="w-6 print:hidden bg-primary" />
@@ -6197,6 +6258,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                 </tr>
                               </tfoot>
                             </table>
+                            </PlanTableFrame>
                           </div>
 
                           <div className="flex items-center justify-between mt-4 px-4 pb-4 print:hidden">
