@@ -1226,17 +1226,20 @@ function Watermark({ src, alt = "" }: { src: string; alt?: string }) {
 }
 
 /**
- * Logo watermark confined to the table's ROW area (between the dark column header and
- * the Total row). It is sized to that area with object-fit: contain, so the whole logo
- * and its lettering are always visible — nothing hides behind the header/total bands and
- * nothing is cropped, whether the phase has 3 rows or 30.
+ * Wraps a phase table and (for Phase 1) draws the clinic-logo watermark confined to the
+ * table's ROW area — between the dark column header and the Total row. It is sized to that
+ * area with object-fit: contain, so the whole logo and its lettering are always visible:
+ * nothing hides behind the header/total bands and nothing is cropped, whether the phase
+ * has 3 rows or 30. The area is re-measured whenever the table changes size.
  */
-function TableBodyWatermark({ src, wrapRef }: { src: string; wrapRef: React.RefObject<HTMLDivElement | null> }) {
+function PlanTableFrame({ logo, children }: { logo?: string; children: React.ReactNode }) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     const table = wrap?.querySelector("table") as HTMLTableElement | null;
-    if (!wrap || !table) return;
+    if (!logo || !wrap || !table) return;
     const measure = () => {
       const body = table.tBodies[0];
       if (!body) return;
@@ -1257,30 +1260,24 @@ function TableBodyWatermark({ src, wrapRef }: { src: string; wrapRef: React.RefO
     ro.observe(table);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [src, wrapRef]);
+  }, [logo]);
 
-  if (!src || !box || box.height < 8) return null;
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute z-0 flex items-center justify-center overflow-hidden"
-      style={{ top: box.top, left: box.left, width: box.width, height: box.height }}
-    >
-      <img
-        src={src}
-        alt=""
-        style={{ width: "88%", height: "88%" }}
-        className="object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
-      />
-    </div>
-  );
-}
-
-function PlanTableFrame({ logo, children }: { logo?: string; children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  return (
-    <div ref={ref} className="relative">
-      {logo ? <TableBodyWatermark src={logo} wrapRef={ref} /> : null}
+    <div ref={wrapRef} className="relative">
+      {logo && box && box.height >= 8 ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-0 flex items-center justify-center overflow-hidden"
+          style={{ top: box.top, left: box.left, width: box.width, height: box.height }}
+        >
+          <img
+            src={logo}
+            alt=""
+            style={{ width: "88%", height: "88%" }}
+            className="object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
+          />
+        </div>
+      ) : null}
       {children}
     </div>
   );
