@@ -147,7 +147,6 @@ import {
 } from "@/lib/plan-rules";
 import { useLiveRates, CURRENCY_CODES, VCB_MODE_LABEL, type VcbMode } from "@/lib/currency";
 import { SavedPlansBar } from "@/components/SavedPlans";
-import { PlanImportButton, type ImportResult } from "@/components/PlanImportDialog";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { ShorthandPlanButton } from "@/components/ShorthandPlanDialog";
 import type { ShorthandDraft } from "@/lib/shorthand";
@@ -574,12 +573,19 @@ function composePhaseTitle(base: string, timeline: string): string {
 
 // USD -> AUD conversion (editable in UI)
 const DEFAULT_USD_TO_AUD = 1.52;
-const fmtNum = (n: number, decimals = 2) =>
-  n.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-const fmtInt = (n: number) => Math.round(n).toLocaleString("en-US");
+// Intl.NumberFormat objects are expensive to create; toLocaleString() builds a new one on
+// every call, and these run for every price cell on every render — so reuse them.
+const NF_INT = new Intl.NumberFormat("en-US");
+const NF_BY_DECIMALS = new Map<number, Intl.NumberFormat>();
+const fmtNum = (n: number, decimals = 2) => {
+  let nf = NF_BY_DECIMALS.get(decimals);
+  if (!nf) {
+    nf = new Intl.NumberFormat("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    NF_BY_DECIMALS.set(decimals, nf);
+  }
+  return nf.format(n);
+};
+const fmtInt = (n: number) => NF_INT.format(Math.round(n));
 /** Format a user-typed numeric string with thousand separators; leaves non-numeric text intact. */
 const fmtStrNum = (s: string, decimals = 0) => {
   const raw = (s ?? "").toString().trim();
@@ -592,30 +598,37 @@ const fmtStrNum = (s: string, decimals = 0) => {
 
 // -------- Undo / Redo history --------
 function useUndoRedo(snapshot: Record<string, unknown>, restore: (s: any) => void) {
-  const json = JSON.stringify(snapshot);
+  // The snapshot can hold large base64 photos. It used to be JSON.stringify-ed on EVERY render
+  // (i.e. every keystroke); now it is serialised only once typing pauses (450 ms) — or on demand.
+  const snapRef = useRef(snapshot);
+  snapRef.current = snapshot;
   const past = useRef<string[]>([]);
   const future = useRef<string[]>([]);
-  const current = useRef<string>(json);
+  const current = useRef<string | null>(null); // JSON of the last committed state
   const restoring = useRef(false);
   const [, force] = useState(0);
 
   useEffect(() => {
-    if (restoring.current) {
-      restoring.current = false;
-      current.current = json;
-      return;
-    }
-    if (json === current.current) return;
-    const prev = current.current;
     const t = setTimeout(() => {
-      past.current.push(prev);
+      const json = JSON.stringify(snapRef.current);
+      if (restoring.current) {
+        restoring.current = false;
+        current.current = json;
+        return;
+      }
+      if (current.current === null) {
+        current.current = json;
+        return;
+      }
+      if (json === current.current) return;
+      past.current.push(current.current);
       if (past.current.length > 100) past.current.shift();
       future.current = [];
       current.current = json;
       force((n) => n + 1);
     }, 450);
     return () => clearTimeout(t);
-  }, [json]);
+  });
 
   const apply = (s: string) => {
     restoring.current = true;
@@ -625,21 +638,22 @@ function useUndoRedo(snapshot: Record<string, unknown>, restore: (s: any) => voi
   };
 
   const undo = () => {
-    if (json !== current.current) {
+    const json = JSON.stringify(snapRef.current);
+    if (current.current !== null && json !== current.current) {
       // commit the in-flight edit so it can be redone
       future.current.push(json);
       apply(current.current);
       return;
     }
     const prev = past.current.pop();
-    if (prev === undefined) return;
+    if (prev === undefined || current.current === null) return;
     future.current.push(current.current);
     apply(prev);
   };
 
   const redo = () => {
     const next = future.current.pop();
-    if (next === undefined) return;
+    if (next === undefined || current.current === null) return;
     past.current.push(current.current);
     apply(next);
   };
@@ -671,7 +685,7 @@ function useUndoRedo(snapshot: Record<string, unknown>, restore: (s: any) => voi
     const dropped = past.current.length + future.current.length;
     past.current = [];
     future.current = [];
-    current.current = json;
+    current.current = JSON.stringify(snapRef.current);
     force((n) => n + 1);
     return dropped;
   };
@@ -680,7 +694,7 @@ function useUndoRedo(snapshot: Record<string, unknown>, restore: (s: any) => voi
     undo,
     redo,
     clearHistory,
-    canUndo: past.current.length > 0 || json !== current.current,
+    canUndo: past.current.length > 0,
     canRedo: future.current.length > 0,
   };
 }
@@ -4521,41 +4535,6 @@ function PlanPage({ content }: { content: ContentMap }) {
     }
   };
 
-  // Fill the plan from a photo/screenshot (see PlanImportDialog). Rows are plain
-  // rows — prices come from the clinic catalog when the service matches it,
-  // otherwise from the price printed on the image, otherwise 0 (editable).
-  const applyImportedPlan = (res: ImportResult) => {
-    if (res.patientName) {
-      const nm = res.patientName;
-      setPatient((p) => ({ ...p, fullName: nm }));
-      // The page greeting ("Dear …,") is what names the plan/file, so keep it in step.
-      setGreeting(`Dear ${nm},`);
-    }
-    if (res.phases.length === 0) return;
-    const build = (offset: number): Phase[] =>
-      res.phases.map((ph, i) => ({
-        id: uid(),
-        title: ph.title ?? `Phase ${offset + i + 1} — Treatment`,
-        rows: ph.rows.map((r) => {
-          const free = isInPackageService(r.name);
-          return {
-            id: uid(),
-            name: r.name,
-            tooth: r.tooth,
-            qty: r.qty,
-            unitVnd: free
-              ? null
-              : isRemovablePartialDenture(r.name)
-                ? RPD_BASE_VND
-                : (catalogPrice(r.name) ?? r.unitPriceVnd ?? 0),
-            discount: qualifiesForTempDentureDiscount(r.name) ? autoDiscountVnd(r.name, r.qty) : 0,
-          } satisfies Row;
-        }),
-      }));
-    if (res.mode === "replace") setPhases(build(0));
-    else setPhases((p) => [...p, ...build(p.length)]);
-  };
-
   // Quick plan: shorthand text (see ShorthandPlanDialog) → rows. Prices come from the
   // catalog (a "(Provisional)" variant falls back to its base service's price).
   const applyShorthandPlan = (draft: ShorthandDraft, mode: "replace" | "append") => {
@@ -4716,7 +4695,7 @@ function PlanPage({ content }: { content: ContentMap }) {
         <div className="h-1.5 w-full bg-gradient-to-r from-primary via-accent to-primary no-print" />
 
         {/* Sticky toolbar */}
-        <div className="no-print sticky top-0 z-30 backdrop-blur-xl bg-card/95 border-b border-border shadow-md print:hidden">
+        <div className="no-print sticky top-0 z-30 bg-card/95 border-b border-border shadow-md print:hidden">
           <div className="max-w-[2000px] mx-auto flex flex-wrap items-center gap-4 px-5 pt-4 pb-7">
             <div className="flex items-center gap-3">
               <EditableImage
@@ -4759,8 +4738,6 @@ function PlanPage({ content }: { content: ContentMap }) {
               </div>
 
               <SavedPlansBar getSnapshot={() => undoSnapshot} restore={restoreSavedPlan} patientName={displayName} />
-
-              <PlanImportButton catalogNames={catalog.items.map((i) => i.name)} onApply={applyImportedPlan} />
 
               {contentManager && (
                 <Link
@@ -6179,10 +6156,10 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               fx: undefined,
                                             });
                                           }}
-                                          className="w-40 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary tabular-nums print:hidden"
+                                          className="w-40 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary tabular-nums print:hidden"
                                         />
 
-                                        <span className="hidden print:block tabular-nums whitespace-nowrap">
+                                        <span className="hidden print:block tabular-nums whitespace-nowrap font-bold">
                                           {row.unitVnd === null ? "In package" : fmtInt(row.unitVnd)}
                                         </span>
                                       </td>
@@ -6197,9 +6174,9 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               discount: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
                                             })
                                           }
-                                          className="w-32 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
+                                          className="w-32 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                         />
-                                        <span className="hidden print:block tabular-nums">
+                                        <span className="hidden print:block tabular-nums font-bold">
                                           {row.discount ? fmtInt(row.discount) : "—"}
                                         </span>
                                       </td>
@@ -6218,9 +6195,9 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                 }
                                                 placeholder={row.unitVnd === null ? "In package" : "—"}
                                                 onChange={(e) => updateRow(phase.id, row.id, { vnd: e.target.value })}
-                                                className="w-40 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
+                                                className="w-40 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                               />
-                                              <span className="hidden print:block tabular-nums whitespace-nowrap">
+                                              <span className="hidden print:block tabular-nums whitespace-nowrap font-bold">
                                                 {row.vnd !== undefined
                                                   ? fmtStrNum(row.vnd)
                                                   : row.unitVnd === null
@@ -6246,9 +6223,9 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                     fx: { ...(row.fx ?? {}), [col.id]: e.target.value },
                                                   })
                                                 }
-                                                className="w-32 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
+                                                className="w-32 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                               />
-                                              <span className="hidden print:block tabular-nums whitespace-nowrap">
+                                              <span className="hidden print:block tabular-nums whitespace-nowrap font-bold">
                                                 {row.fx?.[col.id] !== undefined
                                                   ? fmtStrNum(row.fx[col.id], 2)
                                                   : row.unitVnd === null
@@ -6292,7 +6269,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                               </tbody>
                               <tfoot>
                                 {(phase.deductions ?? []).map((d) => (
-                                  <tr key={d.id} className="bg-secondary/60 font-semibold text-foreground text-[2.25rem]">
+                                  <tr key={d.id} className="bg-secondary/60 font-bold text-foreground text-[2.25rem]">
                                     <td className="py-3 px-3 print:hidden border-0" />
                                     <td className="py-2.5 px-3 text-center" colSpan={6}>
                                       <input
@@ -6413,18 +6390,18 @@ function PlanPage({ content }: { content: ContentMap }) {
               className="grid rounded-t-xl"
               style={{ gridTemplateColumns: `minmax(0,1fr) repeat(${cols.length}, minmax(22rem, 34rem))` }}
             >
-              <div className="bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground font-extrabold uppercase tracking-[0.18em] px-6 py-5 text-[3.5rem] md:text-[5rem] rounded-tl-xl flex items-center justify-center text-center">
+              <div className="bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground font-extrabold uppercase tracking-[0.18em] px-6 py-8 text-[4.75rem] md:text-[7rem] rounded-tl-xl flex items-center justify-center text-center">
                 Total
               </div>
               {cols.map((col, ci) => (
                 <div
                   key={col.id}
-                  className={`bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground text-center px-4 py-4 tabular-nums border-l-2 border-primary/30 ${ci === cols.length - 1 ? "rounded-tr-xl" : ""}`}
+                  className={`bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground text-center px-4 py-6 tabular-nums border-l-2 border-primary/30 ${ci === cols.length - 1 ? "rounded-tr-xl" : ""}`}
                 >
-                  <div className="text-[1.5rem] md:text-[1.75rem] font-extrabold uppercase tracking-[0.18em] text-primary/90">
+                  <div className="text-[2rem] md:text-[2.25rem] font-extrabold uppercase tracking-[0.18em] text-primary/90">
                     {col.label}
                   </div>
-                  <div className="font-extrabold text-[3.5rem] md:text-[4.5rem] leading-tight text-primary whitespace-nowrap">
+                  <div className="font-black text-[4.5rem] md:text-[6.25rem] leading-tight text-primary whitespace-nowrap">
                     <span className="scope-live print:hidden">
                       {col.kind === "vnd" && fmtInt(grandTotals.vnd)}
                       {col.kind === "fx" && fmtNum(grandFx(col))}
@@ -6439,12 +6416,12 @@ function PlanPage({ content }: { content: ContentMap }) {
                 </div>
               ))}
             </div>
-            <div className="bg-card px-5 py-3 text-primary font-bold italic text-[1.25rem] md:text-[1.5rem] border-t-2 border-primary">
+            <div className="bg-card px-6 py-4 text-primary font-bold italic text-[2rem] border-t-2 border-primary">
               *Note: This treatment plan and the estimated costs are based on the doctor&apos;s assessment of the
               current condition and will be finalized after the in-person examination.
             </div>
             {cols.some((c) => c.kind === "fx") && (
-              <div className="bg-card px-5 pb-4 text-[1.25rem] md:text-[1.375rem] text-muted-foreground rounded-b-xl">
+              <div className="bg-card px-6 pb-5 text-[2rem] text-muted-foreground rounded-b-xl">
                 Foreign-currency amounts are converted from VND using{" "}
                 {ratesSource.startsWith("Vietcombank") ? `Vietcombank exchange rates (${VCB_MODE_LABEL[vcbMode]})` : "live exchange rates"}
                 {ratesUpdatedAt ? ` (updated ${ratesUpdatedAt})` : ""}. At this time:{" "}

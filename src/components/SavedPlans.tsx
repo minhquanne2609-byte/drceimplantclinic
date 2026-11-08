@@ -94,6 +94,14 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
   // the page over newer work. Everything async below reads these refs instead.
   const snapRef = useRef(getSnapshot);
   snapRef.current = getSnapshot;
+  // Bumped on every render, so the watcher below can skip serialising the whole plan
+  // (which can hold large base64 photos) when nothing was re-rendered since its last look.
+  const renderId = useRef(0);
+  renderId.current += 1;
+  const seenRender = useRef(-1);
+  const draftTimer = useRef<number | null>(null);
+  const lastDraftAt = useRef(0);
+  const pendingDraft = useRef<string | null>(null);
   const idRef = useRef(currentId);
   idRef.current = currentId;
   const nameRef = useRef(currentName);
@@ -133,6 +141,22 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
       pendingDeleteRef.current = null;
       void deleteDraft(old);
     }
+  };
+
+  /** Local backups are throttled (at most one every ~4 s) — structured-cloning a plan with photos isn't free. */
+  const scheduleDraft = (json: string) => {
+    pendingDraft.current = json;
+    if (draftTimer.current) return;
+    const wait = Math.max(0, 4000 - (Date.now() - lastDraftAt.current));
+    draftTimer.current = window.setTimeout(() => {
+      draftTimer.current = null;
+      const j = pendingDraft.current;
+      pendingDraft.current = null;
+      if (j) {
+        lastDraftAt.current = Date.now();
+        void writeDraft(j);
+      }
+    }, wait);
   };
 
   const scheduleCloud = (delay: number, keepIfOld = false) => {
@@ -190,6 +214,8 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
   /** Watch for changes → local backup right away, cloud autosave debounced. */
   useEffect(() => {
     const tick = () => {
+      if (renderId.current === seenRender.current) return; // nothing re-rendered since last look
+      seenRender.current = renderId.current;
       let json = "";
       try {
         json = JSON.stringify(snapRef.current());
@@ -206,7 +232,7 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
 
       // Local backup — only once the page differs from the blank starting
       // state, so just opening the app can never overwrite an earlier backup.
-      if (json !== initialJsonRef.current) void writeDraft(json);
+      if (json !== initialJsonRef.current) scheduleDraft(json);
 
       if (isDirty && idRef.current) scheduleCloud(4000, true);
     };
@@ -214,6 +240,7 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
     return () => {
       window.clearInterval(t);
       if (cloudTimer.current) window.clearTimeout(cloudTimer.current);
+      if (draftTimer.current) window.clearTimeout(draftTimer.current);
     };
   }, []);
 
@@ -235,7 +262,11 @@ export function SavedPlansBar({ getSnapshot, restore, patientName }: Props) {
       } catch {
         return;
       }
-      if (initialJsonRef.current && json !== initialJsonRef.current) void writeDraft(json);
+      if (initialJsonRef.current && json !== initialJsonRef.current) {
+        pendingDraft.current = null;
+        lastDraftAt.current = Date.now();
+        void writeDraft(json);
+      }
       if (idRef.current && savedJsonRef.current && json !== savedJsonRef.current) {
         if (cloudTimer.current) {
           window.clearTimeout(cloudTimer.current);

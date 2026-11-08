@@ -58,6 +58,12 @@ function decodeHtmlEntities(value: string): string {
     return value ?? "";
   }
 
+  // No "&" → no entities to decode. This is by far the common case and avoids
+  // creating throw-away DOM nodes (this runs for many strings on every render).
+  if (!value || value.indexOf("&") === -1) {
+    return value ?? "";
+  }
+
   let result = value ?? "";
 
   for (let i = 0; i < 3; i++) {
@@ -203,6 +209,9 @@ export function toHtml(value: string): string {
 /**
  * Convert rich HTML into readable plain text.
  */
+const PLAIN_CACHE = new Map<string, string>();
+const PLAIN_CACHE_MAX = 4000;
+
 export function toPlain(value: string): string {
   const raw = value ?? "";
 
@@ -210,6 +219,22 @@ export function toPlain(value: string): string {
     return "";
   }
 
+  // Called for many strings on every render — remember the answers.
+  const hit = PLAIN_CACHE.get(raw);
+  if (hit !== undefined) {
+    return hit;
+  }
+
+  const result = toPlainUncached(raw);
+  // Don't cache the server-side result (no DOM there) — it differs from the browser's.
+  if (typeof document !== "undefined") {
+    if (PLAIN_CACHE.size >= PLAIN_CACHE_MAX) PLAIN_CACHE.clear();
+    PLAIN_CACHE.set(raw, result);
+  }
+  return result;
+}
+
+function toPlainUncached(raw: string): string {
   const normalized = normalizeRichHtml(raw);
 
   if (!isHtml(normalized)) {
