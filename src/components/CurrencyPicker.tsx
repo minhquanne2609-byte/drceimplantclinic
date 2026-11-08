@@ -15,12 +15,14 @@ type Props = {
   onChange: (code: string) => void;
   /** 1 VND = rates[CODE]; currencies without a live rate can't be converted. */
   rates: Record<string, number>;
+  /** Currencies whose rate comes from Vietcombank (others use a market-rate estimate). */
+  vcbCodes?: Set<string>;
   /** "header" inherits the surrounding (white-on-blue) text; "field" looks like a form control. */
   variant?: "header" | "field";
   title?: string;
 };
 
-export function CurrencyPicker({ value, onChange, rates, variant = "header", title = "Change currency" }: Props) {
+export function CurrencyPicker({ value, onChange, rates, vcbCodes, variant = "header", title = "Change currency" }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const zoomScale = useZoomCounterScale(open);
@@ -63,6 +65,10 @@ export function CurrencyPicker({ value, onChange, rates, variant = "header", tit
         <span className="w-6 text-muted-foreground text-xs">{sym}</span>
         <span className="flex-1 truncate">{currencyName(code)}</span>
         {!usable && <span className="text-[10px] text-muted-foreground">no live rate</span>}
+        {usable && vcbCodes?.has(code) && <span className="text-[10px] font-semibold text-emerald-700">VCB</span>}
+        {usable && vcbCodes && vcbCodes.size > 0 && !vcbCodes.has(code) && code !== "VND" && (
+          <span className="text-[10px] text-muted-foreground">market</span>
+        )}
       </button>
     );
   };

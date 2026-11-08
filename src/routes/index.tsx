@@ -128,6 +128,7 @@ import {
   EXTRACTION_DISCOUNT_VND,
   findImplantWarranty,
   IMPLANT_ABUTMENT_NAMES,
+  abutmentForImplant,
   isAllOnImplantSystemRow,
   isImplantServiceRow,
   isToothExtractionRow,
@@ -144,10 +145,12 @@ import {
   rpdTotalVnd,
   RPD_BASE_VND,
 } from "@/lib/plan-rules";
-import { useLiveRates, CURRENCY_CODES } from "@/lib/currency";
+import { useLiveRates, CURRENCY_CODES, VCB_MODE_LABEL, type VcbMode } from "@/lib/currency";
 import { SavedPlansBar } from "@/components/SavedPlans";
 import { PlanImportButton, type ImportResult } from "@/components/PlanImportDialog";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
+import { ShorthandPlanButton } from "@/components/ShorthandPlanDialog";
+import type { ShorthandDraft } from "@/lib/shorthand";
 import { PatientJourneyNav } from "@/components/PatientJourneyNav";
 import { SectionHeading } from "@/components/SectionHeading";
 import { PhotoCollage } from "@/components/PhotoCollage";
@@ -1273,8 +1276,8 @@ function PlanTableFrame({ logo, children }: { logo?: string; children: React.Rea
           <img
             src={logo}
             alt=""
-            style={{ width: "88%", height: "88%" }}
-            className="object-contain opacity-[0.1] print:opacity-[0.13] grayscale"
+            style={{ width: "92%", height: "92%" }}
+            className="object-contain opacity-[0.13] print:opacity-[0.15] grayscale"
           />
         </div>
       ) : null}
@@ -2342,7 +2345,16 @@ function PlanPage({ content }: { content: ContentMap }) {
     { id: "vnd", label: "VND", kind: "vnd" },
     { id: "fx1", label: "AUD", kind: "fx", currency: "AUD" },
   ]);
-  const { rates, updatedAt: ratesUpdatedAt, loading: ratesLoading, refresh: refreshRates } = useLiveRates();
+  const {
+    rates,
+    updatedAt: ratesUpdatedAt,
+    sourceLabel: ratesSource,
+    vcbCodes,
+    vcbMode,
+    setVcbMode,
+    loading: ratesLoading,
+    refresh: refreshRates,
+  } = useLiveRates();
   // Currencies that can be recognized as a live-FX column: the curated list
   // plus whatever the live rates API actually returned (so any currency code
   // typed in later that the API supports — even ones not in the curated list —
@@ -2871,10 +2883,16 @@ function PlanPage({ content }: { content: ContentMap }) {
 
       // --- implant teeth from Phase 1 (single implants only) ---
       let implantTeeth = "";
+      // Teeth per abutment brand: with mixed brands (e.g. Neodent on 14-15, Osstem on the
+      // rest) each brand's Abutment row must only list the teeth of ITS implants.
+      const implantTeethByAbutment = new Map<string, string>();
       for (const r of first.rows) {
-        if (isSingleImplantName(toPlain(r.name))) implantTeeth = mergeTeeth(implantTeeth, r.tooth);
+        if (isSingleImplantName(toPlain(r.name))) {
+          implantTeeth = mergeTeeth(implantTeeth, r.tooth);
+          const ab = abutmentForImplant(toPlain(r.name)).toLowerCase();
+          implantTeethByAbutment.set(ab, mergeTeeth(implantTeethByAbutment.get(ab) ?? "", r.tooth));
+        }
       }
-      const implantQty = countTeeth(implantTeeth);
 
       if (second) {
         // Abutment brand now follows the implant that was picked (see
@@ -2882,10 +2900,13 @@ function PlanPage({ content }: { content: ContentMap }) {
         // recognised here, not just Osstem's.
         for (const name of [...IMPLANT_ABUTMENT_NAMES, "Zirconia Sagemax Crown on Implant"]) {
           const i = second.rows.findIndex((r) => r.auto && toPlain(r.name).trim().toLowerCase() === name.toLowerCase());
+          const isCrown = name === "Zirconia Sagemax Crown on Implant";
+          const teethForName = isCrown ? implantTeeth : (implantTeethByAbutment.get(name.toLowerCase()) ?? "");
+          const implantQty = countTeeth(teethForName);
           if (implantQty > 0) {
             if (i >= 0) {
               const r = second.rows[i];
-              const tooth = r.toothManual ? r.tooth : implantTeeth;
+              const tooth = r.toothManual ? r.tooth : teethForName;
               const qty = r.qtyManual ? r.qty : r.toothManual ? Math.max(1, countTeeth(tooth)) : implantQty;
               if (r.tooth !== tooth || r.qty !== qty) {
                 second.rows[i] = { ...r, tooth, qty };
@@ -4535,6 +4556,63 @@ function PlanPage({ content }: { content: ContentMap }) {
     else setPhases((p) => [...p, ...build(p.length)]);
   };
 
+  // Quick plan: shorthand text (see ShorthandPlanDialog) → rows. Prices come from the
+  // catalog (a "(Provisional)" variant falls back to its base service's price).
+  const applyShorthandPlan = (draft: ShorthandDraft, mode: "replace" | "append") => {
+    const priceOf = (name: string, priceLike?: string) =>
+      catalogPrice(name) ??
+      catalogPrice(name.replace(/\s*\(provisional\)\s*$/i, "")) ??
+      (priceLike ? catalogPrice(priceLike) : null) ??
+      0;
+    const mkRow = (r: ShorthandDraft["rows"][number]): Row => ({
+      id: uid(),
+      name: r.name,
+      tooth: r.teeth,
+      qty: r.qty,
+      unitVnd: isInPackageService(r.name)
+        ? null
+        : isRemovablePartialDenture(r.name)
+          ? RPD_BASE_VND
+          : priceOf(r.name, r.priceLike),
+      discount: qualifiesForTempDentureDiscount(r.name) ? autoDiscountVnd(r.name, r.qty) : 0,
+      ...(r.auto ? { auto: true } : {}),
+    });
+    setPhases((prev) => {
+      const next = prev.map((ph) => ({ ...ph, rows: [...ph.rows] }));
+      while (next.length < 2) {
+        next.push({ id: uid(), title: "Phase 2 — Prosthetics Restoration (14–21 days)", rows: [] });
+      }
+      for (const idx of [0, 1]) {
+        const fresh = draft.rows.filter((r) => r.phase === idx);
+        if (mode === "replace") {
+          // keep the standard free items (Consultation, CT scan, Blood test…) at the top of Phase 1
+          const keep = idx === 0 ? next[0].rows.filter((r) => isInPackageService(r.name) && !r.dx && !r.auto) : [];
+          next[idx].rows = [...keep, ...fresh.map(mkRow)];
+        } else {
+          for (const r of fresh) {
+            const i = next[idx].rows.findIndex((x) => toPlain(x.name).toLowerCase() === r.name.toLowerCase());
+            if (i < 0) {
+              next[idx].rows.push(mkRow(r));
+              continue;
+            }
+            const ex = next[idx].rows[i];
+            const tooth = mergeTeeth(ex.tooth, r.teeth);
+            const qty = r.qtyKind === "teeth" && tooth ? Math.max(1, countTeeth(tooth)) : ex.qty + r.qty;
+            next[idx].rows[i] = {
+              ...ex,
+              tooth,
+              qty,
+              discount: qualifiesForTempDentureDiscount(ex.name) ? autoDiscountVnd(ex.name, qty) : (ex.discount ?? 0),
+            };
+          }
+        }
+        const tl = draft.timelines[idx];
+        if (tl) next[idx].title = composePhaseTitle(splitPhaseTitle(next[idx].title).base, tl);
+      }
+      return next;
+    });
+  };
+
   // ----- "Clear cache" — free memory after a long session / many exports -----
   // Repeated image/PDF exports and a deep undo history (each step is a full
   // JSON snapshot of the page, base64 photos included) are what make the tab
@@ -4654,7 +4732,22 @@ function PlanPage({ content }: { content: ContentMap }) {
             <div className="ml-auto flex items-center gap-3.5 text-base">
               <div className="no-print print:hidden text-muted-foreground flex items-center gap-2 bg-muted px-4 py-2 rounded-full">
                 <span className="font-semibold text-foreground">Live FX</span>
-                <span className="text-sm">{ratesUpdatedAt ? `updated ${ratesUpdatedAt}` : "using fallback rates"}</span>
+                <span className="text-sm">
+                  {ratesSource}
+                  {ratesUpdatedAt ? ` · updated ${ratesUpdatedAt}` : ""}
+                </span>
+                <select
+                  value={vcbMode}
+                  onChange={(e) => setVcbMode(e.target.value as VcbMode)}
+                  className="text-sm bg-transparent border border-border rounded-md px-1.5 py-0.5 text-foreground"
+                  title="Which Vietcombank rate to use: Sell = bank sells foreign currency (higher VND per unit); Buy = bank buys it"
+                >
+                  {(Object.keys(VCB_MODE_LABEL) as VcbMode[]).map((m) => (
+                    <option key={m} value={m}>
+                      {VCB_MODE_LABEL[m]}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={() => void refreshRates()}
                   disabled={ratesLoading}
@@ -5687,6 +5780,12 @@ function PlanPage({ content }: { content: ContentMap }) {
               )}
             </div>
             <div className="no-print flex items-center gap-3 print:hidden">
+              <ShorthandPlanButton
+                catalogNames={catalog.items.map((i) => i.name)}
+                onApply={applyShorthandPlan}
+                iconSize={28}
+                buttonClassName="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border bg-card text-foreground text-[2rem] font-semibold shadow-sm hover:bg-muted"
+              />
               <Popover open={converterOpen} onOpenChange={setConverterOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -5721,7 +5820,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                         className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
                         placeholder="Amount"
                       />
-                      <CurrencyPicker value={converterFrom} onChange={setConverterFrom} rates={rates} variant="field" title="From currency" />
+                      <CurrencyPicker value={converterFrom} onChange={setConverterFrom} rates={rates} vcbCodes={vcbCodes} variant="field" title="From currency" />
                     </div>
 
                     <div className="flex items-center justify-center">
@@ -5740,15 +5839,15 @@ function PlanPage({ content }: { content: ContentMap }) {
                       <div className="w-full rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm font-semibold">
                         {converterResult === null ? "—" : fmtNum(converterResult, converterTo === "VND" ? 0 : 2)}
                       </div>
-                      <CurrencyPicker value={converterTo} onChange={setConverterTo} rates={rates} variant="field" title="To currency" />
+                      <CurrencyPicker value={converterTo} onChange={setConverterTo} rates={rates} vcbCodes={vcbCodes} variant="field" title="To currency" />
                     </div>
 
                     <div className="text-xs text-muted-foreground">
                       {ratesLoading
                         ? "Updating live rates…"
                         : ratesUpdatedAt
-                          ? `Live rates as of ${ratesUpdatedAt}`
-                          : "Using fallback rates"}
+                          ? `${ratesSource} · as of ${ratesUpdatedAt}`
+                          : "Using estimated rates"}
                     </div>
                   </div>
                 </PopoverContent>
@@ -5931,6 +6030,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               value={col.currency ?? "AUD"}
                                               onChange={(c) => setColCurrency(col.id, c)}
                                               rates={rates}
+                                              vcbCodes={vcbCodes}
                                             />
                                           </>
                                         ) : (
@@ -6345,7 +6445,8 @@ function PlanPage({ content }: { content: ContentMap }) {
             </div>
             {cols.some((c) => c.kind === "fx") && (
               <div className="bg-card px-5 pb-4 text-[1.25rem] md:text-[1.375rem] text-muted-foreground rounded-b-xl">
-                Foreign-currency amounts are converted from VND using live exchange rates
+                Foreign-currency amounts are converted from VND using{" "}
+                {ratesSource.startsWith("Vietcombank") ? `Vietcombank exchange rates (${VCB_MODE_LABEL[vcbMode]})` : "live exchange rates"}
                 {ratesUpdatedAt ? ` (updated ${ratesUpdatedAt})` : ""}. At this time:{" "}
                 {cols
                   .filter((c) => c.kind === "fx" && (rates[c.currency ?? "AUD"] ?? 0) > 0)
