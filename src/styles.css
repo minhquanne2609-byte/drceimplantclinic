@@ -1873,3 +1873,46 @@ body.png-export .plan-table th {
     padding: 0 !important;
   }
 }
+
+/* ---- Never split a word / number across lines in the treatment plan ----
+   The print + PNG-export rules above force `white-space: normal` and
+   `overflow-wrap: break-word` on every cell, so on machines whose font/zoom makes a
+   column a hair too narrow the browser broke "VND" into "VN / D". Headers may still wrap
+   BETWEEN words (e.g. "Discount / unit") but never inside one; amount cells and amount
+   headers stay on one line and their column grows to fit. */
+.plan-table th,
+body.png-export .plan-table th {
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+.plan-table th.plan-col-amount,
+body.png-export .plan-table th.plan-col-amount,
+.plan-table th.plan-col-amount *,
+body.png-export .plan-table th.plan-col-amount * {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+}
+.plan-table td:nth-child(n + 6):not(:last-child),
+body.png-export .plan-table td:nth-child(n + 6):not(:last-child) {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: keep-all !important;
+}
+.plan-table th.plan-col-amount,
+body.png-export .plan-table th.plan-col-amount {
+  min-width: max-content !important;
+}
+@media print {
+  .plan-table th,
+  .plan-table th.plan-col-amount,
+  .plan-table td:nth-child(n + 6):not(:last-child) {
+    overflow-wrap: normal !important;
+    word-break: keep-all !important;
+  }
+  .plan-table th.plan-col-amount,
+  .plan-table td:nth-child(n + 6):not(:last-child) {
+    white-space: nowrap !important;
+  }
+}
