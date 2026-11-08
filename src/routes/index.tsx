@@ -1242,6 +1242,17 @@ function Watermark({ src, alt = "" }: { src: string; alt?: string }) {
   );
 }
 
+/** Keeps an amount on one line at full size; its cell/column grows to fit the digits. */
+function FitText({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <span className={`inline-block whitespace-nowrap ${className ?? ""}`}>{children}</span>;
+}
+
+/** Width (in ch) for a money <input> so its full value is always visible. */
+const fitCh = (value: string | number | undefined | null, min = 8): React.CSSProperties => ({
+  width: `${Math.max(min, String(value ?? "").length + 2)}ch`,
+  maxWidth: "100%",
+});
+
 /**
  * Wraps a phase table and (for Phase 1) draws the clinic-logo watermark confined to the
  * table's ROW area — between the dark column header and the Total row. It is sized to that
@@ -6156,6 +6167,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               fx: undefined,
                                             });
                                           }}
+                                          style={fitCh(row.unitVnd == null ? "" : fmtInt(row.unitVnd), 9)}
                                           className="w-40 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary tabular-nums print:hidden"
                                         />
 
@@ -6174,6 +6186,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                               discount: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
                                             })
                                           }
+                                          style={fitCh(row.discount ? fmtInt(row.discount) : "", 7)}
                                           className="w-32 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                         />
                                         <span className="hidden print:block tabular-nums font-bold">
@@ -6195,6 +6208,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                 }
                                                 placeholder={row.unitVnd === null ? "In package" : "—"}
                                                 onChange={(e) => updateRow(phase.id, row.id, { vnd: e.target.value })}
+                                                style={fitCh(row.vnd !== undefined ? fmtStrNum(row.vnd) : row.unitVnd === null ? "" : fmtInt(computeVnd(row)), 9)}
                                                 className="w-40 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                               />
                                               <span className="hidden print:block tabular-nums whitespace-nowrap font-bold">
@@ -6223,6 +6237,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                     fx: { ...(row.fx ?? {}), [col.id]: e.target.value },
                                                   })
                                                 }
+                                                style={fitCh(row.fx?.[col.id] !== undefined ? fmtStrNum(row.fx[col.id], 2) : row.unitVnd === null ? "" : fmtNum(rowFx(row, col)), 8)}
                                                 className="w-32 text-center font-bold bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                               />
                                               <span className="hidden print:block tabular-nums whitespace-nowrap font-bold">
@@ -6245,6 +6260,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                     extra: { ...(row.extra ?? {}), [col.id]: e.target.value },
                                                   })
                                                 }
+                                                style={fitCh(fmtStrNum(row.extra?.[col.id] ?? "", 2), 8)}
                                                 className="w-32 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary print:hidden"
                                               />
                                               <span className="hidden print:block break-words">
@@ -6296,6 +6312,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                                                     vnd: Number(e.target.value.replace(/[^\d]/g, "")) || 0,
                                                   })
                                                 }
+                                                style={fitCh(d.vnd ? fmtInt(d.vnd) : "", 9)}
                                                 className="w-44 text-center bg-transparent outline-none border-b border-dotted border-border focus:border-primary"
                                               />
                                             </span>
@@ -6324,8 +6341,10 @@ function PlanPage({ content }: { content: ContentMap }) {
 
                                   {cols.map((col) => (
                                     <td key={col.id} className="py-3 px-3 text-center">
-                                      {col.kind === "vnd" && fmtInt(phaseVnd)}
-                                      {col.kind === "fx" && fmtNum(phaseVnd * (rates[col.currency ?? "AUD"] ?? 0))}
+                                      <FitText>
+                                        {col.kind === "vnd" && fmtInt(phaseVnd)}
+                                        {col.kind === "fx" && fmtNum(phaseVnd * (rates[col.currency ?? "AUD"] ?? 0))}
+                                      </FitText>
                                     </td>
                                   ))}
                                   <td className="print:hidden border-0" />
@@ -6388,7 +6407,7 @@ function PlanPage({ content }: { content: ContentMap }) {
           >
             <div
               className="grid rounded-t-xl"
-              style={{ gridTemplateColumns: `minmax(0,1fr) repeat(${cols.length}, minmax(22rem, 34rem))` }}
+              style={{ gridTemplateColumns: `minmax(12rem,1fr) repeat(${cols.length}, minmax(22rem, max-content))` }}
             >
               <div className="bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground font-extrabold uppercase tracking-[0.18em] px-6 py-8 text-[4.75rem] md:text-[7rem] rounded-tl-xl flex items-center justify-center text-center">
                 Total
@@ -6396,12 +6415,13 @@ function PlanPage({ content }: { content: ContentMap }) {
               {cols.map((col, ci) => (
                 <div
                   key={col.id}
-                  className={`bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground text-center px-4 py-6 tabular-nums border-l-2 border-primary/30 ${ci === cols.length - 1 ? "rounded-tr-xl" : ""}`}
+                  className={`bg-[color-mix(in_oklab,var(--accent)_45%,white)] text-foreground text-center px-8 py-6 tabular-nums border-l-2 border-primary/30 ${ci === cols.length - 1 ? "rounded-tr-xl" : ""}`}
                 >
                   <div className="text-[2rem] md:text-[2.25rem] font-extrabold uppercase tracking-[0.18em] text-primary/90">
                     {col.label}
                   </div>
                   <div className="font-black text-[4.5rem] md:text-[6.25rem] leading-tight text-primary whitespace-nowrap">
+                    <FitText>
                     <span className="scope-live print:hidden">
                       {col.kind === "vnd" && fmtInt(grandTotals.vnd)}
                       {col.kind === "fx" && fmtNum(grandFx(col))}
@@ -6412,6 +6432,7 @@ function PlanPage({ content }: { content: ContentMap }) {
                       {col.kind === "fx" && fmtNum(scopedFx(col))}
                       {col.kind === "custom" && "—"}
                     </span>
+                    </FitText>
                   </div>
                 </div>
               ))}
